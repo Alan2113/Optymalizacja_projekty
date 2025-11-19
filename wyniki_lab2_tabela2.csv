@@ -1,0 +1,7 @@
+Dlugosc_kroku;Metoda;Liczba_min_globalnych;Srednie_x1;Srednie_x2;Srednie_f;Srednie_calls
+0,500000;Hooke-Jeeves;18;0,000061;0,000192;0,000024;84
+0,500000;Rosenbrock;15;0,000062;0,000008;0,000020;41
+0,100000;Hooke-Jeeves;23;0,000069;-0,000032;0,000012;75
+0,100000;Rosenbrock;23;-0,000075;-0,000033;0,000028;37
+0,010000;Hooke-Jeeves;23;-0,000018;0,000016;0,000008;74
+0,010000;Rosenbrock;23;-0,000131;-0,000017;0,000020;41
