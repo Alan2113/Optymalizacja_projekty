@@ -11,3 +11,7 @@ matrix df1(double, matrix, matrix = NAN, matrix = NAN);  // Równania ró¿niczkowe
 matrix ff2T(matrix, matrix = NAN, matrix = NAN);  // Funkcja testowa lab2
 matrix ff2R(matrix, matrix = NAN, matrix = NAN);  // Problem rzeczywisty lab2
 matrix df2(double, matrix, matrix = NAN, matrix = NAN);  // Równania ró¿niczkowe lab2
+matrix ff3T(matrix x, matrix ud1, matrix ud2);
+matrix gg3T(matrix x, matrix ud1, matrix ud2);
+matrix ff3R(matrix x, matrix ud1, matrix ud2);
+matrix df3(double t, matrix Y, matrix ud1, matrix ud2);

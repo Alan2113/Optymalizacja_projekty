@@ -79,7 +79,7 @@ int main()
 	try
 	{
 		//lab2_wykres_pelny();
-		lab2();  // Zamiast lab1()
+		lab3();  // Zamiast lab1()
 	}
 	catch (string EX_INFO)
 	{
@@ -1070,8 +1070,216 @@ void lab2()
 
 void lab3()
 {
+	cout << "==========================================" << endl;
+	cout << "   START LAB3 – uruchamianie obliczen..." << endl;
+	cout << "==========================================" << endl;
 
+	// --- ZAPIS TABELI 1 ---
+	cout << "[1/4] Tworzenie tabeli 1 (300 optymalizacji testowych)..." << endl;
+
+	ofstream t1("tabela1.csv");
+	t1 << "Lp; x1_0; x2_0; x1_star_ext; x2_star_ext; r_star_ext; y_star_ext; f_calls_ext;"
+		<< "x1_star_int; x2_star_int; r_star_int; y_star_int; f_calls_int\n";
+
+	double a_vals[3] = { 4.0, 4.4934, 5.0 };
+	int lp = 1;
+
+	vector<double> mean_ext_x1(3, 0), mean_ext_x2(3, 0), mean_ext_r(3, 0), mean_ext_y(3, 0), mean_ext_calls(3, 0);
+	vector<double> mean_int_x1(3, 0), mean_int_x2(3, 0), mean_int_r(3, 0), mean_int_y(3, 0), mean_int_calls(3, 0);
+
+	srand((unsigned)time(nullptr));
+	for (int k = 0; k < 3; k++)
+	{
+		double a = a_vals[k];
+
+		cout << "   • Parametr a = " << a << " -> uruchamianie 100 optymalizacji..." << endl;
+
+		matrix ud_a(1, 1); ud_a(0) = a;
+
+		for (int i = 0; i < 100; i++)
+		{
+			if ((i + 1) % 10 == 0) {
+				cout << "     > Wykonano " << (i + 1) << "/100 iteracji dla a = " << a << endl;
+			}
+
+			double x1_0 = (double)rand() / RAND_MAX;
+			double x2_0 = (double)rand() / RAND_MAX;
+
+			matrix x0(2, 1);
+			x0(0) = x1_0;
+			x0(1) = x2_0;
+
+			// --- ZEWNÊTRZNA FUNKCJA KARY ---
+			solution::clear_calls();
+			solution ext = pen(ff3T, x0, 1.0, 2.0, 1e-3, 20000, ud_a, matrix());
+
+			if (get_len(ext.x) < 2) {
+				ext.x = matrix(2, 1);
+				ext.x(0) = NAN; ext.x(1) = NAN;
+				ext.y = matrix(1, 1); ext.y(0) = NAN;
+			}
+
+			double x1e = ext.x(0);
+			double x2e = ext.x(1);
+			double re = sqrt(x1e * x1e + x2e * x2e);
+			double ye = m2d(ext.y);
+			int fce = solution::f_calls;
+
+			mean_ext_x1[k] += (isnan(x1e) ? 0.0 : x1e);
+			mean_ext_x2[k] += (isnan(x2e) ? 0.0 : x2e);
+			mean_ext_r[k] += (isnan(re) ? 0.0 : re);
+			mean_ext_y[k] += (isnan(ye) ? 0.0 : ye);
+			mean_ext_calls[k] += fce;
+
+			// --- WEWNÊTRZNA FUNKCJA KARY ---
+			solution::clear_calls();
+			solution in = sym_NM(ff3T, x0, 0.2, 1.0, 0.5, 2.0, 0.5, 1e-3, 20000, ud_a, matrix());
+
+			if (get_len(in.x) < 2) {
+				in.x = matrix(2, 1);
+				in.x(0) = NAN; in.x(1) = NAN;
+				in.y = matrix(1, 1); in.y(0) = NAN;
+			}
+
+			double x1i = in.x(0);
+			double x2i = in.x(1);
+			double ri = sqrt(x1i * x1i + x2i * x2i);
+			double yi = m2d(in.y);
+			int fci = solution::f_calls;
+
+			mean_int_x1[k] += (isnan(x1i) ? 0.0 : x1i);
+			mean_int_x2[k] += (isnan(x2i) ? 0.0 : x2i);
+			mean_int_r[k] += (isnan(ri) ? 0.0 : ri);
+			mean_int_y[k] += (isnan(yi) ? 0.0 : yi);
+			mean_int_calls[k] += fci;
+
+			t1 << lp++ << "; " << x1_0 << "; " << x2_0 << "; "
+				<< x1e << "; " << x2e << "; " << re << "; " << ye << "; " << fce << "; "
+				<< x1i << "; " << x2i << "; " << ri << "; " << yi << "; " << fci << "\n";
+		}
+
+		cout << "   ? Zakonczono optymalizacje dla a = " << a << endl;
+	}
+
+	t1.close();
+	cout << "[1/4] Zapisano tabela1.csv" << endl << endl;
+
+	// --- TABELA 2 ---
+	cout << "[2/4] Tworzenie tabeli 2 (œrednie wartoœci)..." << endl;
+
+	ofstream t2("tabela2.csv");
+	t2 << "a; x1_star_ext; x2_star_ext; r_star_ext; y_star_ext; f_calls_ext; "
+		<< "x1_star_int; x2_star_int; r_star_int; y_star_int; f_calls_int\n";
+
+	for (int k = 0; k < 3; k++)
+	{
+		t2 << a_vals[k] << "; "
+			<< mean_ext_x1[k] / 100 << "; " << mean_ext_x2[k] / 100 << "; " << mean_ext_r[k] / 100 << "; " << mean_ext_y[k] / 100 << "; " << mean_ext_calls[k] / 100 << "; "
+			<< mean_int_x1[k] / 100 << "; " << mean_int_x2[k] / 100 << "; " << mean_int_r[k] / 100 << "; " << mean_int_y[k] / 100 << "; " << mean_int_calls[k] / 100
+			<< "\n";
+	}
+
+	t2.close();
+	cout << "[2/4] Zapisano tabela2.csv" << endl << endl;
+
+	// --- TABELA 3 ---
+	cout << "[3/4] Optymalizacja problemu rzeczywistego..." << endl;
+
+	ofstream t3("tabela3.csv");
+	t3 << "v0x0; w0; v0x_star; w_star; x_end_star; x_star_y50; f_calls\n";
+
+	matrix xstart(2, 1);
+	xstart(0) = 5;
+	xstart(1) = 5;
+
+	solution::clear_calls();
+	solution optR = pen(ff3R, xstart, 1.0, 2.0, 1e-3, 30000, matrix(), matrix());
+
+	if (get_len(optR.x) < 2) {
+		optR.x = matrix(2, 1);
+		optR.x(0) = NAN; optR.x(1) = NAN;
+		optR.y = matrix(1, 1); optR.y(0) = NAN;
+	}
+
+	double v0s = optR.x(0);
+	double ws = optR.x(1);
+
+	cout << "   • Optimum znalezione: v0x* = " << v0s
+		<< ", w* = " << ws
+		<< ", y* = " << m2d(optR.y) << endl;
+
+	// przygotuj ud dla omega (1x1)
+	matrix udw(1, 1);
+	udw(0) = ws;
+
+	// warunki poczatkowe ODE
+	matrix Y0(4, 1);
+	Y0(0) = v0s; Y0(1) = 0.0; Y0(2) = 0.0; Y0(3) = 100.0;
+
+	// symulacja
+	matrix* T = solve_ode(df3, 0.0, 0.01, 7.0, Y0, udw, matrix());
+
+	int* sz = get_size(T[1]);
+	int Nsim = sz[0];
+	delete[] sz;
+
+	// --- x_end: pierwsze przeciêcie z ziemi¹ (y <= 0)
+	double x_end = NAN;
+	for (int i = 1; i < Nsim; i++) {
+		double y_prev = T[1](i - 1, 3);
+		double y_curr = T[1](i, 3);
+		if (y_prev > 0.0 && y_curr <= 0.0) {
+			double x_prev = T[1](i - 1, 2);
+			double x_curr = T[1](i, 2);
+			double tau = (0.0 - y_prev) / (y_curr - y_prev);
+			x_end = x_prev + tau * (x_curr - x_prev);
+			break;
+		}
+	}
+	// jeœli nigdy nie uderzy w ziemiê – weŸ koniec (rzadka sytuacja)
+	if (isnan(x_end)) x_end = T[1](Nsim - 1, 2);
+
+
+	// --- x(y=50): pierwsze przeciêcie y=50 przy spadku
+	double x_at_y50 = NAN;
+	for (int i = 1; i < Nsim; i++) {
+		double y_prev = T[1](i - 1, 3);
+		double y_curr = T[1](i, 3);
+		if (y_prev >= 50.0 && y_curr <= 50.0) {
+			double x_prev = T[1](i - 1, 2);
+			double x_curr = T[1](i, 2);
+			double tau = (50.0 - y_prev) / (y_curr - y_prev);
+			x_at_y50 = x_prev + tau * (x_curr - x_prev);
+			break;
+		}
+	}
+
+
+	t3 << 5 << "; " << 5 << "; " << v0s << "; " << ws << "; " << x_end << "; " << (isnan(x_at_y50) ? string("nan") : to_string(x_at_y50)) << "; " << solution::f_calls << "\n";
+	t3.close();
+	cout << "[3/4] Zapisano tabela3.csv" << endl << endl;
+
+	// --- SYMULACJA ---
+	cout << "[4/4] Generowanie danych do symulacja.csv..." << endl;
+
+	ofstream sim("symulacja.csv");
+	sim << "t; x; y\n";
+	for (int i = 0; i < Nsim; i++)
+		sim << T[0](i) << "; " << T[1](i, 2) << "; " << T[1](i, 3) << "\n";
+	sim.close();
+
+	// cleanup
+	delete[] T;
+
+	cout << "[4/4] Zapisano symulacja.csv" << endl << endl;
+	cout << "==========================================" << endl;
+	cout << "   ZAKONCZONO LAB3 – WSZYSTKIE TABELKI OK" << endl;
+	cout << "==========================================" << endl;
 }
+
+
+
+
 
 void lab4()
 {

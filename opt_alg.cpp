@@ -1,40 +1,83 @@
 ﻿#include"opt_alg.h"
 
-solution MC(matrix(*ff)(matrix, matrix, matrix), int N, matrix lb, matrix ub, double epsilon, int Nmax, matrix ud1, matrix ud2)
+// ====== GLOBALNE DO FUNKCJI KARY ======
+static matrix(*__ff_base)(matrix, matrix, matrix);
+static double __c_pen;
+static matrix __ud1_pen;
+static matrix __ud2_pen;
+
+// ====== CACHE FF(x) oraz GG(x) ======
+#include <unordered_map>
+#include <sstream>
+#include <iomanip>
+
+static std::unordered_map<std::string, matrix> __cache_ff;
+static std::unordered_map<std::string, matrix> __cache_gg;
+
+// HASH punktu
+static std::string __hash_x(const matrix& x)
 {
-	// Zmienne wejściowe:
-	// ff - wskaźnik do funkcji celu
-	// N - liczba zmiennych funkcji celu
-	// lb, ub - dolne i górne ograniczenie
-	// epslion - zakłądana dokładność rozwiązania
-	// Nmax - maksymalna liczba wywołań funkcji celu
-	// ud1, ud2 - user data
-	try
-	{
-		solution Xopt;
-		while (true)
-		{
-			Xopt = rand_mat(N);									// losujemy macierz Nx1 stosując rozkład jednostajny na przedziale [0,1]
-			for (int i = 0; i < N; ++i)
-				Xopt.x(i) = (ub(i) - lb(i)) * Xopt.x(i) + lb(i);// przeskalowywujemy rozwiązanie do przedziału [lb, ub]
-			Xopt.fit_fun(ff, ud1, ud2);							// obliczmy wartość funkcji celu
-			if (Xopt.y < epsilon)								// sprawdzmy 1. kryterium stopu
-			{
-				Xopt.flag = 1;									// flaga = 1 ozancza znalezienie rozwiązanie z zadaną dokładnością
-				break;
-			}
-			if (solution::f_calls > Nmax)						// sprawdzmy 2. kryterium stopu
-			{
-				Xopt.flag = 0;									// flaga = 0 ozancza przekroczenie maksymalne liczby wywołań funkcji celu
-				break;
-			}
-		}
-		return Xopt;
+	std::ostringstream oss;
+	oss << std::fixed << std::setprecision(8);
+	for (int i = 0; i < get_len(x); i++)
+		oss << x(i) << ",";
+	return oss.str();
+}
+
+// pobranie ff(x) z cache
+static matrix __cached_ff(matrix(*ff)(matrix, matrix, matrix), const matrix& x)
+{
+	std::string key = __hash_x(x);
+	auto it = __cache_ff.find(key);
+	if (it != __cache_ff.end()) return it->second;
+
+	matrix xx = x;
+	matrix val = ff(xx, __ud1_pen, __ud2_pen);
+	__cache_ff[key] = val;
+	return val;
+}
+
+// pobranie gg(x) z cache
+static matrix __cached_gg(const matrix& x)
+{
+	std::string key = __hash_x(x);
+	auto it = __cache_gg.find(key);
+	if (it != __cache_gg.end()) return it->second;
+
+	matrix xx = x;
+	matrix g = gg3T(xx, __ud1_pen, __ud2_pen);
+	__cache_gg[key] = g;
+	return g;
+}
+
+
+solution MC(matrix(*ff)(matrix, matrix, matrix), int Ndim, matrix lb, matrix ub, double epsilon, int Nmax, matrix ud1, matrix ud2)
+{
+	solution best;
+	best.x = lb;
+	best.fit_fun(ff, ud1, ud2);
+	best.flag = 0;
+
+	std::random_device rd;
+	std::mt19937 gen(rd());
+	vector<std::uniform_real_distribution<double>> dist;
+	for (int i = 0; i < Ndim; ++i) {
+		double a = lb(i);
+		double b = ub(i);
+		dist.emplace_back(a, b);
 	}
-	catch (string ex_info)
-	{
-		throw ("solution MC(...):\n" + ex_info);
+
+	int iter = 0;
+	while (solution::f_calls < Nmax) {
+		matrix x(Ndim, 1);
+		for (int i = 0; i < Ndim; i++) x(i) = dist[i](gen);
+		solution s(x);
+		s.fit_fun(ff, ud1, ud2);
+		if (m2d(s.y) < m2d(best.y)) { best = s; best.flag = 1; }
+		iter++;
+		if (m2d(best.y) < epsilon) break;
 	}
+	return best;
 }
 
 // ========== METODA EKSPANSJI ==========
@@ -409,32 +452,165 @@ solution Rosen(matrix(*ff)(matrix, matrix, matrix), matrix x0, matrix s0, double
 	}
 }
 
+matrix ff_penalty_wrapper(matrix x, matrix, matrix)
+{
+	if (!__ff_base) throw string("ff_penalty_wrapper: base function null");
+
+	// użyj cache zamiast surowego wywołania
+	matrix f = __cached_ff(__ff_base, x);
+	matrix g = __cached_gg(x);
+
+	double S = 0.0;
+	int ng = get_len(g);
+	for (int i = 0; i < ng; i++) {
+		double gi = g(i);
+		if (gi > 0.0) S += gi * gi;   // L2 (bezpieczna wersja)
+		// jeśli chcesz karę L1 zamiast L2 --> zamień na: S += gi;
+	}
+
+	matrix y(1, 1);
+	y(0) = m2d(f) + __c_pen * S;
+	return y;
+}
+
+
+
 solution pen(matrix(*ff)(matrix, matrix, matrix), matrix x0, double c, double dc, double epsilon, int Nmax, matrix ud1, matrix ud2)
 {
 	try {
-		solution Xopt;
-		//Tu wpisz kod funkcji
-
-		return Xopt;
+		solution X = x0;
+		__ff_base = ff;
+		__ud1_pen = ud1;
+		__ud2_pen = ud2;
+		// wyczyszczenie cache dla nowej optymalizacji
+		__cache_ff.clear();
+		__cache_gg.clear();
+		int iter = 0;
+		while (true) {
+			__c_pen = c;
+			// run NM on penalized function
+			solution Xm = sym_NM(ff_penalty_wrapper, X.x, 0.2, 1.0, 0.5, 2.0, 0.5, epsilon, Nmax / 10, ud1, ud2);
+			X = Xm;
+			if (m2d(X.y) < epsilon) { X.flag = 1; return X; }
+			c *= dc;
+			iter++;
+			if (solution::f_calls > Nmax || iter > 1) { X.flag = 0; return X; }
+		}
 	}
-	catch (string ex_info)
-	{
-		throw ("solution pen(...):\n" + ex_info);
+	catch (string ex) {
+		throw string("solution pen(...):\n") + ex;
 	}
 }
 
-solution sym_NM(matrix(*ff)(matrix, matrix, matrix), matrix x0, double s, double alpha, double beta, double gamma, double delta, double epsilon, int Nmax, matrix ud1, matrix ud2)
+solution sym_NM(matrix(*ff)(matrix, matrix, matrix),
+	matrix x0,
+	double s,
+	double alpha,
+	double beta,
+	double gamma,
+	double delta,
+	double epsilon,
+	int Nmax,
+	matrix ud1,
+	matrix ud2)
 {
-	try
-	{
-		solution Xopt;
-		//Tu wpisz kod funkcji
+	try {
+		int n = get_len(x0);
+		// simplex P: n+1 points
+		vector<solution> P;
+		P.reserve(n + 1);
+		// p0 = x0
+		P.emplace_back(x0);
+		for (int i = 0; i < n; i++) {
+			matrix xi = x0;
+			xi(i) = xi(i) + s;
+			P.emplace_back(xi);
+		}
+		// evaluate
+		for (int i = 0; i <= n; i++) P[i].fit_fun(ff, ud1, ud2);
 
-		return Xopt;
+		while (true) {
+			if (solution::f_calls > Nmax) { solution X = P[0]; X.flag = 0; return X; }
+			// find best and worst
+			int idx_min = 0, idx_max = 0;
+			double fmin = m2d(P[0].y);
+			double fmax = fmin;
+			for (int i = 1; i <= n; i++) {
+				double fi = m2d(P[i].y);
+				if (fi < fmin) { fmin = fi; idx_min = i; }
+				if (fi > fmax) { fmax = fi; idx_max = i; }
+			}
+			// compute centroid p (n x 1) of all points except idx_max
+			matrix p(n, 1);
+			for (int i = 0; i < n; i++) p(i) = 0.0;
+			for (int i = 0; i <= n; i++) {
+				if (i == idx_max) continue;
+				for (int j = 0; j < n; j++) {
+					p(j) = p(j) + P[i].x(j);
+				}
+			}
+			for (int j = 0; j < n; j++) p(j) = p(j) / static_cast<double>(n);
+
+			// reflection: x_ref = p + alpha*(p - x_max)
+			matrix x_ref(n, 1);
+			for (int j = 0; j < n; j++) {
+				double val = p(j) + alpha * (p(j) - P[idx_max].x(j));
+				x_ref(j) = val;
+			}
+			solution Sref(x_ref);
+			Sref.fit_fun(ff, ud1, ud2);
+			double f_ref = m2d(Sref.y);
+
+			if (f_ref < m2d(P[idx_min].y)) {
+				// expansion
+				matrix x_exp(n, 1);
+				for (int j = 0; j < n; j++) x_exp(j) = p(j) + gamma * (x_ref(j) - p(j));
+				solution Sexp(x_exp); Sexp.fit_fun(ff, ud1, ud2);
+				if (m2d(Sexp.y) < f_ref) P[idx_max] = Sexp; else P[idx_max] = Sref;
+			}
+			else {
+				if (f_ref < m2d(P[idx_max].y) && f_ref >= m2d(P[idx_min].y)) {
+					P[idx_max] = Sref;
+				}
+				else {
+					// contraction
+					matrix x_con(n, 1);
+					for (int j = 0; j < n; j++) x_con(j) = p(j) + beta * (P[idx_max].x(j) - p(j));
+					solution Scon(x_con); Scon.fit_fun(ff, ud1, ud2);
+					if (m2d(Scon.y) < m2d(P[idx_max].y)) {
+						P[idx_max] = Scon;
+					}
+					else {
+						// shrink towards best
+						matrix x_min = P[idx_min].x;
+						for (int i = 0; i <= n; i++) {
+							if (i == idx_min) continue;
+							matrix xi(n, 1);
+							for (int j = 0; j < n; j++) xi(j) = x_min(j) + delta * (P[i].x(j) - x_min(j));
+							P[i].x = xi;
+							P[i].fit_fun(ff, ud1, ud2);
+						}
+					}
+				}
+			}
+
+			// convergence test: max distance to best
+			double maxd = 0.0;
+			for (int i = 0; i <= n; i++) {
+				if (i == idx_min) continue;
+				double s2 = 0.0;
+				for (int j = 0; j < n; j++) {
+					double d = P[idx_min].x(j) - P[i].x(j);
+					s2 += d * d;
+				}
+				double dn = sqrt(s2);
+				if (dn > maxd) maxd = dn;
+			}
+			if (maxd < epsilon) { solution X = P[idx_min]; X.flag = 1; return X; }
+		}
 	}
-	catch (string ex_info)
-	{
-		throw ("solution sym_NM(...):\n" + ex_info);
+	catch (string ex) {
+		throw string("solution sym_NM(...):\n") + ex;
 	}
 }
 

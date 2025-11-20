@@ -1,5 +1,19 @@
-﻿#include"user_funs.h"
+﻿#include "user_funs.h"
+#include "ode_solver.h"
 #include <cmath>
+#include <limits>
+
+// Stała PI (MSVC nie posiada M_PI)
+static const double PI = 3.14159265358979323846;
+
+// Stałe fizyczne
+static const double rho_air = 1.2;
+static const double m_ball = 0.6;
+static const double r_ball = 0.12;
+static const double S_ball = PI * r_ball * r_ball;
+static const double C_d = 0.47;
+static const double g_acc = 9.81;
+
 matrix ff0T(matrix x, matrix ud1, matrix ud2)				// funkcja celu dla przypadku testowego
 {
 	matrix y;												// y zawiera wartość funkcji celu
@@ -320,3 +334,196 @@ matrix df1(double t, matrix Y, matrix ud1, matrix ud2)
 
 	return dY;
 }
+
+matrix ff3T(matrix x, matrix ud1, matrix ud2)
+{
+	matrix y(1, 1);
+	double x1 = x(0);
+	double x2 = x(1);
+
+	// domyślne a
+	double a = 4.0;
+	// bezpieczne pobranie ud1
+	try { if (get_len(ud1) == 1) a = ud1(0); }
+	catch (...) {}
+
+	y(0) = (x1 - a) * (x1 - a) + (x2 - 1.0) * (x2 - 1.0);
+	return y;
+}
+
+matrix gg3T(matrix x, matrix ud1, matrix ud2)
+{
+	matrix g(3, 1);
+	double x1 = x(0);
+	double x2 = x(1);
+	g(0) = x1 + x2 - 2.0;
+	g(1) = x1 * x1 + x2 - 2.0;
+	g(2) = -x1;
+	return g;
+}
+
+// ================= df3 =================
+// Y = [vx; vy; x; y]  (kolumnowy wektor stanu)
+// ud1(0) = omega (rad/s)
+// ================= df3 =================
+// Y = [vx; vy; x; y]  (kolumnowy wektor stanu)
+// ud1(0) = omega (rad/s)
+matrix df3(double t, matrix Y, matrix ud1, matrix ud2)
+{
+	matrix dY(4, 1);
+	// stan
+	double vx = Y(0);
+	double vy = Y(1);
+	// parametry z instrukcji
+	const double rho = 1.2;
+	const double m = 0.6;
+	const double r = 0.12;
+	const double S = 3.14159265358979323846 * r * r;
+	const double C = 0.47;
+	const double g = 9.81;
+
+	double omega = 0.0;
+	if (get_len(ud1) == 1) {
+		try { omega = ud1(0); }
+		catch (...) { omega = 0.0; }
+	}
+
+	// --- Siły wg instrukcji ---
+	double Dx = 0.5 * C * rho * S * vx * fabs(vx);   // Dx = 1/2 C rho S vx |vx|
+	double Dy = 0.5 * C * rho * S * vy * fabs(vy);   // Dy = 1/2 C rho S vy |vy|
+
+	double FMx = rho * vy * omega * 3.14159265358979323846 * r * r * r; // FMx = rho * vy * omega * pi * r^3
+	double FMy = rho * vx * omega * 3.14159265358979323846 * r * r * r; // FMy = rho * vx * omega * pi * r^3
+
+	// równania ruchu zgodne z zadaniem:
+	// m d2x/dt2 + Dx + FMx = 0  -> ax = -(Dx + FMx)/m
+	// m d2y/dt2 + Dy + FMy = - m g  -> ay = -g - (Dy + FMy)/m
+	double ax = -(Dx + FMx) / m;
+	double ay = -g - (Dy + FMy) / m;
+
+	dY(0) = ax;
+	dY(1) = ay;
+	dY(2) = vx;
+	dY(3) = vy;
+	return dY;
+}
+
+
+// ================= ff3R =================
+// x = [v0x; omega]
+// Cel: maksymalizacja x_end (pierwsze przecięcie y<=0) z ograniczeniem x przy y=50 w [3,7].
+// Zwracamy wartość do minimalizacji: yout = -x_end + PEN_COEFF*penalty
+matrix ff3R(matrix x, matrix ud1, matrix ud2)
+{
+	// decyzje
+	double v0x = x(0);
+	double omega = x(1);
+
+	// jeżeli wartości wyraźnie poza dopuszczalnym przedziałem, dodaj karę
+	const double LIM = 10.0;
+	bool out_of_bounds = (v0x < -LIM || v0x > LIM || omega < -LIM || omega > LIM);
+
+	// warunki poczatkowe
+	matrix Y0(4, 1);
+	Y0(0) = v0x;    // vx(0)
+	Y0(1) = 0.0;    // vy(0) = 0
+	Y0(2) = 0.0;    // x(0)
+	Y0(3) = 100.0;  // y(0)
+
+	// ud dla ODE (omega)
+	matrix udw(1, 1); udw(0) = omega;
+
+	// integracja
+	double t0 = 0.0, dt = 0.01, tend = 7.0;
+	matrix* S = nullptr;
+	try {
+		S = solve_ode(df3, t0, dt, tend, Y0, udw, matrix());
+	}
+	catch (...) {
+		// solver nie wykonał się -> ogromny koszt
+		matrix yout(1, 1); yout(0) = 1e9; return yout;
+	}
+	// rozmiary: S[1] jest macierzą (N x 4)
+	int* sz = get_size(S[1]);
+	int N = sz[0];
+	delete[] sz;
+	if (N < 2) { delete[] S; matrix yout(1, 1); yout(0) = 1e9; return yout; }
+
+	// --- znajdz pierwsze przecięcie z ziemią (y_prev > 0, y_curr <= 0) i interpoluj x_end
+	double x_end = NAN;
+	bool hit_ground = false;
+	for (int i = 1; i < N; ++i)
+	{
+		double y_prev = S[1](i - 1, 3);
+		double y_curr = S[1](i, 3);
+		if (y_prev > 0.0 && y_curr <= 0.0) {
+			double x_prev = S[1](i - 1, 2);
+			double x_curr = S[1](i, 2);
+			if (y_curr == y_prev) x_end = x_curr;
+			else {
+				double tau = (0.0 - y_prev) / (y_curr - y_prev);
+				x_end = x_prev + tau * (x_curr - x_prev);
+			}
+			hit_ground = true;
+			break;
+		}
+	}
+	// jeśli nie uderzyła w ziemię w czasie tend, weź pozycję końcową (karane)
+	if (!hit_ground) x_end = S[1](N - 1, 2);
+
+	// --- znajdz x przy y=50 (pierwsze przecięcie przy spadku: y_prev >=50 && y_curr <=50)
+	double x_at_y50 = NAN;
+	bool reached50 = false;
+	for (int i = 1; i < N; ++i)
+	{
+		double y_prev = S[1](i - 1, 3);
+		double y_curr = S[1](i, 3);
+		if (y_prev >= 50.0 && y_curr <= 50.0) {
+			double x_prev = S[1](i - 1, 2);
+			double x_curr = S[1](i, 2);
+			if (y_curr == y_prev) x_at_y50 = x_curr;
+			else {
+				double tau = (50.0 - y_prev) / (y_curr - y_prev);
+				x_at_y50 = x_prev + tau * (x_curr - x_prev);
+			}
+			reached50 = true;
+			break;
+		}
+	}
+
+	// free memory from solve_ode
+	delete[] S;
+
+	// --- oblicz cel i kary
+	double obj = -x_end; // minimalizator: chcemy maksymalizowac x_end
+
+	const double PEN_COEFF = 1e5;
+	double penalty = 0.0;
+
+	if (out_of_bounds) {
+		penalty += 1.0; // naruszenie prostych ograniczen
+	}
+
+	// jeśli nie osiągnął 50m podczas spadku -> kara (może oznaczać zbyt wolny spadek)
+	if (!reached50) {
+		penalty += 1.0;
+	}
+	else {
+		// sprawdz warunek x_at_y50 in [3,7]
+		if (!(x_at_y50 >= 3.0 && x_at_y50 <= 7.0)) {
+			double dist = 0.0;
+			if (x_at_y50 < 3.0) dist = 3.0 - x_at_y50;
+			else if (x_at_y50 > 7.0) dist = x_at_y50 - 7.0;
+			penalty += dist * dist;
+		}
+	}
+
+	matrix yout(1, 1);
+	yout(0) = obj + PEN_COEFF * penalty;
+	// zabezpieczenie numeryczne: nie zwracamy NaN/inf
+	if (!(yout(0) == yout(0)) || isinf(yout(0))) { yout(0) = 1e9; }
+	return yout;
+}
+
+
+
