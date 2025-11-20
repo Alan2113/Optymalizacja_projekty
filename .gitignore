@@ -1,8 +1,4 @@
 .vs/
-*.vcxproj
-*.vcxproj.filters
-*.vcxproj.user
-*.sln
 Debug/
 Release/
 x64/
