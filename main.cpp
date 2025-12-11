@@ -7,13 +7,14 @@ Katedra Informatyki Stosowanej i Modelowania
 Akademia Górniczo-Hutnicza
 Data ostatniej modyfikacji: 30.09.2025
 *********************************************/
-const double M_PI = 3.141592653589793238;
+//const double M_PI = 3.141592653589793238;
 #include"opt_alg.h"
 #include<random>
 #include<sstream>
 #include<iomanip>
 #include<vector>
 #include<cmath>
+#include <fstream>
 using namespace std;
 
 void lab0();
@@ -79,7 +80,9 @@ int main()
 	try
 	{
 		//lab2_wykres_pelny();
-		lab3();  // Zamiast lab1()
+		//lab3();  // Zamiast lab1()
+
+		lab4();
 	}
 	catch (string EX_INFO)
 	{
@@ -1047,7 +1050,7 @@ void lab2()
 	double alpha_final_Rosen = Y_Rosen[1](N_sim - 1, 0);
 	double omega_final_Rosen = Y_Rosen[1](N_sim - 1, 1);
 
-	const double M_PI = 3.141592653589793238;
+	//const double M_PI = 3.141592653589793238;
 	cout << "Wyniki koncowe symulacji:" << endl;
 	cout << "Hooke-Jeeves:" << endl;
 	cout << "  alpha(100s) = " << alpha_final_HJ << " rad (cel: " << M_PI << " rad)" << endl;
@@ -1281,9 +1284,112 @@ void lab3()
 
 
 
+void read_lab4_data(string filename, matrix& M, int rows, int cols) {
+    ifstream file(filename);
+    if (!file.is_open()) {
+        throw string("Nie mozna otworzyc pliku: " + filename);
+    }
+
+    // Dane w plikach s¹ zapisane ci¹giem, ale logicznie tworz¹ macierz.
+    // XData ma 300 liczb (3 wiersze po 100 kolumn), YData ma 100 liczb (1 wiersz po 100 kolumn).
+    // W plikach s¹ one porozdzielane œrednikami i nowymi liniami.
+
+    double val;
+    char sep;
+    for (int r = 0; r < rows; ++r) {
+        for (int c = 0; c < cols; ++c) {
+            file >> val;
+            file >> sep; // Pominiecie œrednika
+            M(r, c) = val;
+        }
+    }
+    file.close();
+}
+
 void lab4()
 {
+    try {
+        // ================= ZADANIE 1: FUNKCJA TESTOWA =================
+        // f(x) = ... (wielomian)
 
+        // Punkt startowy (losowy lub z instrukcji)
+        matrix x0(2, 1);
+        x0(0) = 0.5; // Przyk³adowe wspó³rzêdne, instrukcja mówi o losowaniu z [-2, 2]
+        x0(1) = 0.5;
+
+        double epsilon = 1e-5;
+        int Nmax = 10000;
+        matrix ud1, ud2; // Puste dla funkcji testowej
+
+        // a) Metoda Najszybszego Spadku (Steepest Descent)
+        // h0 = 0.05 (sta³y krok)
+        solution sol_sd = SD(ff4T, gf4T, x0, 0.05, epsilon, Nmax, ud1, ud2);
+        cout << "SD (Test): " << sol_sd.y(0) << " w " << solution::f_calls << " wywolaniach." << endl;
+        solution::clear_calls();
+
+        // b) Metoda Gradientów Sprzê¿onych (CG)
+        solution sol_cg = CG(ff4T, gf4T, x0, 0.05, epsilon, Nmax, ud1, ud2);
+        cout << "CG (Test): " << sol_cg.y(0) << " w " << solution::f_calls << " wywolaniach." << endl;
+        solution::clear_calls();
+
+        // c) Metoda Newtona
+        solution sol_newton = Newton(ff4T, gf4T, Hf4T, x0, 0.05, epsilon, Nmax, ud1, ud2);
+        cout << "Newton (Test): " << sol_newton.y(0) << " w " << solution::f_calls << " wywolaniach." << endl;
+        solution::clear_calls();
+
+
+        // ================= ZADANIE 2: PROBLEM RZECZYWISTY =================
+        // Regresja logistyczna
+
+        // 1. Wczytanie danych z plików
+        // XData: 3 wiersze, 100 kolumn
+        matrix X(3, 100);
+        read_lab4_data("XData.txt", X, 3, 100);
+
+        // YData: 1 wiersz, 100 kolumn
+        matrix Y(1, 100);
+        read_lab4_data("YData.txt", Y, 1, 100);
+
+    	// ===== WERYFIKACJA Z INSTRUKCJI (STR. 3) =====
+    	matrix theta_test(3, 1);
+    	theta_test(0) = 0.1;
+    	theta_test(1) = 0.1;
+    	theta_test(2) = 0.1;
+
+    	// Wczytaj dane (jeœli jeszcze nie s¹ wczytane w tym miejscu kodu)
+    	matrix X_check(3, 100);
+    	read_lab4_data("XData.txt", X_check, 3, 100);
+    	matrix Y_check(1, 100);
+    	read_lab4_data("YData.txt", Y_check, 1, 100);
+
+    	// Oblicz J i Gradient
+    	matrix J_val = ff4R(theta_test, X_check, Y_check);
+    	matrix Grad_val = gf4R(theta_test, X_check, Y_check);
+
+    	cout << "===== WERYFIKACJA =====" << endl;
+    	cout << "Oczekiwane J: ok. 2.72715" << endl;
+    	cout << "Obliczone J:  " << J_val(0) << endl;
+    	cout << "Oczekiwany Gradient: [0.299, 13.60, 13.35]" << endl;
+    	cout << "Obliczony Gradient: " << endl << Grad_val << endl;
+    	cout << "=======================" << endl;
+
+        // 2. Optymalizacja
+        // Parametry theta (3x1), startujemy od zer
+        matrix theta0(3, 1);
+        theta0(0) = 0; theta0(1) = 0; theta0(2) = 0;
+
+        // U¿ywamy X jako ud1 i Y jako ud2
+        // Metoda Gradientów Sprzê¿onych, krok 0.01 (zgodnie z instrukcj¹ dla sta³okrokowej)
+        solution sol_real = CG(ff4R, gf4R, theta0, 0.01, epsilon, Nmax, X, Y);
+
+        cout << "Problem rzeczywisty (CG): J = " << sol_real.y(0) << endl;
+        cout << "Znalezione parametry theta:" << endl;
+        cout << sol_real.x << endl;
+
+    }
+    catch (string ex) {
+        cout << "Blad w lab4: " << ex << endl;
+    }
 }
 
 void lab5()

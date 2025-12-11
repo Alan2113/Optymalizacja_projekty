@@ -1,4 +1,5 @@
 ﻿#include"opt_alg.h"
+#include <cmath>
 
 // ====== GLOBALNE DO FUNKCJI KARY ======
 static matrix(*__ff_base)(matrix, matrix, matrix);
@@ -614,13 +615,100 @@ solution sym_NM(matrix(*ff)(matrix, matrix, matrix),
 	}
 }
 
+// =============================================================
+// POMOCNICZA FUNKCJA DO SZUKANIA KROKU (Line Search)
+// =============================================================
+static double h_golden(matrix(*ff)(matrix, matrix, matrix), matrix x0, matrix d, int Nmax, matrix ud1, matrix ud2)
+{
+	double a = 0.0;
+	double b = 1.0;
+	double epsilon = 1e-7;
+	double alpha = 0.6180339887; // (sqrt(5)-1)/2
+
+	double c = b - alpha * (b - a);
+	double d_pt = a + alpha * (b - a);
+
+	matrix xc = x0 + d * c;
+	matrix xd = x0 + d * d_pt;
+	double fc = m2d(ff(xc, ud1, ud2));
+	double fd = m2d(ff(xd, ud1, ud2));
+
+	for (int i = 0; i < Nmax; ++i)
+	{
+		if (fc < fd)
+		{
+			b = d_pt;
+			d_pt = c;
+			fd = fc;
+			c = b - alpha * (b - a);
+			xc = x0 + d * c;
+			fc = m2d(ff(xc, ud1, ud2));
+		}
+		else
+		{
+			a = c;
+			c = d_pt;
+			fc = fd;
+			d_pt = a + alpha * (b - a);
+			xd = x0 + d * d_pt;
+			fd = m2d(ff(xd, ud1, ud2));
+		}
+
+		if ((b - a) < epsilon) break;
+	}
+
+	return (a + b) / 2.0;
+}
+
+// =============================================================
+// METODA NAJSZYBSZEGO SPADKU (Steepest Descent)
+// =============================================================
+// =============================================================
+// METODA NAJSZYBSZEGO SPADKU (Steepest Descent)
+// =============================================================
 solution SD(matrix(*ff)(matrix, matrix, matrix), matrix(*gf)(matrix, matrix, matrix), matrix x0, double h0, double epsilon, int Nmax, matrix ud1, matrix ud2)
 {
 	try
 	{
 		solution Xopt;
-		//Tu wpisz kod funkcji
+		solution x(x0);
+		matrix d;
+		double h;
 
+		x.fit_fun(ff, ud1, ud2);
+
+		while (solution::f_calls < Nmax)
+		{
+			// ============================================================
+			// WYPISYWANIE DANYCH DO EXCELA (Wykres ścieżki optymalizacji)
+			// Wypisuje: x1, x2
+			// ============================================================
+			std::cout << x.x(0) << "," << x.x(1) << std::endl;
+			// ============================================================
+
+			matrix grad = gf(x.x, ud1, ud2);
+			d = -grad;
+
+			if (h0 < 0) h = h_golden(ff, x.x, d, 100, ud1, ud2);
+			else h = h0;
+
+			matrix x_new = x.x + d * h;
+			solution next_x(x_new);
+			next_x.fit_fun(ff, ud1, ud2);
+
+			matrix diff = next_x.x - x.x;
+			double dist = sqrt(m2d(trans(diff) * diff));
+
+			if (dist < epsilon) {
+				Xopt = next_x;
+				Xopt.flag = 1;
+				return Xopt;
+			}
+			x = next_x;
+		}
+
+		Xopt = x;
+		Xopt.flag = 0;
 		return Xopt;
 	}
 	catch (string ex_info)
@@ -629,13 +717,52 @@ solution SD(matrix(*ff)(matrix, matrix, matrix), matrix(*gf)(matrix, matrix, mat
 	}
 }
 
+// =============================================================
+// METODA GRADIENTÓW SPRZĘŻONYCH (Conjugate Gradient)
+// =============================================================
 solution CG(matrix(*ff)(matrix, matrix, matrix), matrix(*gf)(matrix, matrix, matrix), matrix x0, double h0, double epsilon, int Nmax, matrix ud1, matrix ud2)
 {
 	try
 	{
 		solution Xopt;
-		//Tu wpisz kod funkcji
+		solution x(x0);
+		x.fit_fun(ff, ud1, ud2);
 
+		matrix grad = gf(x.x, ud1, ud2);
+		matrix d = -grad;
+		matrix grad_old = grad;
+
+		while (solution::f_calls < Nmax)
+		{
+			double h;
+			if (h0 < 0) h = h_golden(ff, x.x, d, 100, ud1, ud2);
+			else h = h0;
+
+			matrix x_new = x.x + d * h;
+			solution next_x(x_new);
+			next_x.fit_fun(ff, ud1, ud2);
+
+			matrix diff = next_x.x - x.x;
+			double dist = sqrt(m2d(trans(diff) * diff));
+			if (dist < epsilon) {
+				Xopt = next_x;
+				Xopt.flag = 1;
+				return Xopt;
+			}
+
+			x = next_x;
+
+			matrix grad_new = gf(x.x, ud1, ud2);
+			double num = m2d(trans(grad_new) * grad_new);
+			double den = m2d(trans(grad_old) * grad_old);
+			double beta = num / den;
+
+			d = -grad_new + d * beta;
+			grad_old = grad_new;
+		}
+
+		Xopt = x;
+		Xopt.flag = 0;
 		return Xopt;
 	}
 	catch (string ex_info)
@@ -644,14 +771,45 @@ solution CG(matrix(*ff)(matrix, matrix, matrix), matrix(*gf)(matrix, matrix, mat
 	}
 }
 
+// =============================================================
+// METODA NEWTONA
+// =============================================================
 solution Newton(matrix(*ff)(matrix, matrix, matrix), matrix(*gf)(matrix, matrix, matrix),
 	matrix(*Hf)(matrix, matrix, matrix), matrix x0, double h0, double epsilon, int Nmax, matrix ud1, matrix ud2)
 {
 	try
 	{
 		solution Xopt;
-		//Tu wpisz kod funkcji
+		solution x(x0);
+		x.fit_fun(ff, ud1, ud2);
+		matrix d;
 
+		while (solution::f_calls < Nmax)
+		{
+			matrix grad = gf(x.x, ud1, ud2);
+			matrix H = Hf(x.x, ud1, ud2);
+			d = -inv(H) * grad;
+
+			double h;
+			if (h0 < 0) h = h_golden(ff, x.x, d, 100, ud1, ud2);
+			else h = h0;
+
+			matrix x_new = x.x + d * h;
+			solution next_x(x_new);
+			next_x.fit_fun(ff, ud1, ud2);
+
+			matrix diff = next_x.x - x.x;
+			double dist = sqrt(m2d(trans(diff) * diff));
+			if (dist < epsilon) {
+				Xopt = next_x;
+				Xopt.flag = 1;
+				return Xopt;
+			}
+			x = next_x;
+		}
+
+		Xopt = x;
+		Xopt.flag = 0;
 		return Xopt;
 	}
 	catch (string ex_info)
@@ -660,13 +818,53 @@ solution Newton(matrix(*ff)(matrix, matrix, matrix), matrix(*gf)(matrix, matrix,
 	}
 }
 
+// =============================================================
+// METODA ZŁOTEGO PODZIAŁU 1D
+// =============================================================
 solution golden(matrix(*ff)(matrix, matrix, matrix), double a, double b, double epsilon, int Nmax, matrix ud1, matrix ud2)
 {
 	try
 	{
 		solution Xopt;
-		//Tu wpisz kod funkcji
+		double alpha = 0.6180339887;
+		double a_i = a;
+		double b_i = b;
+		double c_i = b_i - alpha * (b_i - a_i);
+		double d_i = a_i + alpha * (b_i - a_i);
 
+		solution C(c_i); C.fit_fun(ff, ud1, ud2);
+		solution D(d_i); D.fit_fun(ff, ud1, ud2);
+
+		while (solution::f_calls < Nmax)
+		{
+			if (C.y < D.y) {
+				b_i = d_i;
+				d_i = c_i;
+				D = C;
+				c_i = b_i - alpha * (b_i - a_i);
+				C.x = c_i;
+				C.fit_fun(ff, ud1, ud2);
+			}
+			else {
+				a_i = c_i;
+				c_i = d_i;
+				C = D;
+				d_i = a_i + alpha * (b_i - a_i);
+				D.x = d_i;
+				D.fit_fun(ff, ud1, ud2);
+			}
+
+			if ((b_i - a_i) < epsilon) {
+				Xopt.x = (a_i + b_i) / 2.0;
+				Xopt.fit_fun(ff, ud1, ud2);
+				Xopt.flag = 1;
+				return Xopt;
+			}
+		}
+
+		Xopt.x = (a_i + b_i) / 2.0;
+		Xopt.fit_fun(ff, ud1, ud2);
+		Xopt.flag = 0;
 		return Xopt;
 	}
 	catch (string ex_info)
@@ -680,8 +878,7 @@ solution Powell(matrix(*ff)(matrix, matrix, matrix), matrix x0, double epsilon, 
 	try
 	{
 		solution Xopt;
-		//Tu wpisz kod funkcji
-
+		// Tu wpisz kod funkcji (na razie puste)
 		return Xopt;
 	}
 	catch (string ex_info)
@@ -695,8 +892,7 @@ solution EA(matrix(*ff)(matrix, matrix, matrix), int N, matrix lb, matrix ub, in
 	try
 	{
 		solution Xopt;
-		//Tu wpisz kod funkcji
-
+		// Tu wpisz kod funkcji (na razie puste)
 		return Xopt;
 	}
 	catch (string ex_info)
@@ -704,3 +900,5 @@ solution EA(matrix(*ff)(matrix, matrix, matrix), int N, matrix lb, matrix ub, in
 		throw ("solution EA(...):\n" + ex_info);
 	}
 }
+
+

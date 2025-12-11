@@ -54,7 +54,7 @@ matrix df0(double t, matrix Y, matrix ud1, matrix ud2)
 matrix ff1T(matrix x, matrix ud1, matrix ud2)
 {
 
-	double M_PI = 3.141592653589793238;
+	//double M_PI = 3.141592653589793238;
 	matrix y;
 	double x_val = m2d(x);
 	double x_scaled = 0.1 * x_val;
@@ -159,7 +159,7 @@ matrix ff1R(matrix x, matrix ud1, matrix ud2)
 // f(x1, x2) = x1^2 + x2^2 - cos(2.5π*x1) - cos(2.5π*x2) + 2
 matrix ff2T(matrix x, matrix ud1, matrix ud2)
 {
-	const double M_PI = 3.141592653589793238;
+	//const double M_PI = 3.141592653589793238;
 	matrix y;
 	double x1 = x(0);
 	double x2 = x(1);
@@ -185,7 +185,7 @@ matrix ff2R(matrix x, matrix ud1, matrix ud2)
 	double I = (1.0 / 3.0) * mr * pow(l, 2) + mc * pow(l, 2);
 
 	// Referencje
-	float M_PI = 3.141592653589793238;
+	//float M_PI = 3.141592653589793238;
 	const double alpha_ref = M_PI;  // π rad
 	const double omega_ref = 0.0;   // 0 rad/s
 
@@ -242,7 +242,7 @@ matrix df2(double t, matrix Y, matrix ud1, matrix ud2)
 	double I = (1.0 / 3.0) * mr * pow(l, 2) + mc * pow(l, 2);
 
 	// Referencje
-	const double M_PI = 3.141592653589793238;
+	//const double M_PI = 3.141592653589793238;
 	const double alpha_ref = M_PI;
 	const double omega_ref = 0.0;
 
@@ -525,5 +525,118 @@ matrix ff3R(matrix x, matrix ud1, matrix ud2)
 	return yout;
 }
 
+// ==========================================================
+//              LAB 4 - METODY GRADIENTOWE
+// ==========================================================
 
+// --- Funkcja testowa (Test Function) ---
+// f(x) = 1/6*x1^6 - 1.05*x1^4 + 2*x1^2 + x2^2 + x1*x2
+matrix ff4T(matrix x, matrix ud1, matrix ud2)
+{
+    matrix y;
+    double x1 = x(0);
+    double x2 = x(1);
+
+    y = (1.0 / 6.0) * pow(x1, 6) - 1.05 * pow(x1, 4) + 2.0 * pow(x1, 2) + pow(x2, 2) + x1 * x2;
+    return y;
+}
+
+// Gradient funkcji testowej
+matrix gf4T(matrix x, matrix ud1, matrix ud2)
+{
+    matrix g(2, 1);
+    double x1 = x(0);
+    double x2 = x(1);
+
+    g(0) = pow(x1, 5) - 4.2 * pow(x1, 3) + 4.0 * x1 + x2; // pochodna po x1
+    g(1) = 2.0 * x2 + x1;                                 // pochodna po x2
+    return g;
+}
+
+// Hesjan funkcji testowej (do metody Newtona)
+matrix Hf4T(matrix x, matrix ud1, matrix ud2)
+{
+    matrix H(2, 2);
+    double x1 = x(0);
+    // double x2 = x(1); // niewykorzystane w drugich pochodnych
+
+    H(0, 0) = 5.0 * pow(x1, 4) - 12.6 * pow(x1, 2) + 4.0; // d2f / dx1^2
+    H(0, 1) = 1.0;                                        // d2f / dx1 dx2
+    H(1, 0) = 1.0;                                        // d2f / dx2 dx1
+    H(1, 1) = 2.0;                                        // d2f / dx2^2
+    return H;
+}
+
+
+// --- Problem Rzeczywisty (Real Problem) - Regresja Logistyczna ---
+// ud1 = X (macierz danych wejściowych, 3 x m)
+// ud2 = Y (wektor etykiet, 1 x m)
+// theta = x (szukane parametry, 3 x 1)
+
+// Wklej to do user_funs.cpp zamiast starego ff4R i gf4R
+
+// --- Problem Rzeczywisty (Real Problem) - Regresja Logistyczna ---
+matrix ff4R(matrix x, matrix ud1, matrix ud2)
+{
+	matrix y;
+	matrix X = ud1;
+	matrix Y = ud2;
+
+	// --- POPRAWKA TUTAJ ---
+	// Pobieramy rozmiar macierzy Y (1x100), żeby znać liczbę m
+	int* s = get_size(Y);
+	int m = s[1]; // liczba kolumn to liczba próbek
+	delete[] s;   // trzeba zwolnić pamięć po get_size
+	// ----------------------
+
+	double J = 0.0;
+
+	for (int i = 0; i < m; ++i)
+	{
+		matrix xi = X[i];
+		double z = (trans(x) * xi)(0,0);
+		double h = 1.0 / (1.0 + exp(-z));
+
+		// Zabezpieczenie logarytmu
+		if (h < 1e-15) h = 1e-15;
+		if (h > 1.0 - 1e-15) h = 1.0 - 1e-15;
+
+		double yi = Y(0, i);
+
+		J += yi * log(h) + (1.0 - yi) * log(1.0 - h);
+	}
+
+	y = -1.0 / m * J;
+	return y;
+}
+
+matrix gf4R(matrix x, matrix ud1, matrix ud2)
+{
+	matrix X = ud1;
+	matrix Y = ud2;
+
+	// --- POPRAWKA TUTAJ ---
+	int* s = get_size(Y);
+	int m = s[1];
+	delete[] s;
+	// ----------------------
+
+	matrix g(3, 1);
+	g(0) = 0; g(1) = 0; g(2) = 0;
+
+	for (int i = 0; i < m; ++i)
+	{
+		matrix xi = X[i];
+		double z = (trans(x) * xi)(0,0);
+		double h = 1.0 / (1.0 + exp(-z));
+		double yi = Y(0, i);
+
+		double error = h - yi;
+
+		g = g + xi * error;
+	}
+
+	g = g * (1.0 / m);
+	return g;
+}
 
