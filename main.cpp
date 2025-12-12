@@ -15,6 +15,10 @@ Data ostatniej modyfikacji: 30.09.2025
 #include<vector>
 #include<cmath>
 #include <fstream>
+#include <iostream>
+#include <string>
+#include "opt_alg.h"
+#include "user_funs.h"
 using namespace std;
 
 void lab0();
@@ -1306,89 +1310,241 @@ void read_lab4_data(string filename, matrix& M, int rows, int cols) {
     file.close();
 }
 
-void lab4()
-{
+// Zmienne globalne z user_funs.cpp
+extern int f_calls_cnt, g_calls_cnt, h_calls_cnt;
+extern void clear_counters();
+// Zmienna globalna z opt_alg.cpp
+extern std::vector<std::string>* chart_recorder;
+
+// Funkcja pomocnicza do zapisu CSV
+string d2s(double val) {
+    stringstream ss;
+    ss << fixed << setprecision(6) << val;
+    return ss.str();
+}
+
+// Struktura na wyniki jednego przebiegu
+struct ResultRow {
+    double x1_0, x2_0;
+    // SD
+    double sd_x1, sd_x2, sd_y;
+    int sd_f, sd_g;
+    bool sd_global;
+    // CG
+    double cg_x1, cg_x2, cg_y;
+    int cg_f, cg_g;
+    bool cg_global;
+    // Newton
+    double n_x1, n_x2, n_y;
+    int n_f, n_g, n_h;
+    bool n_global;
+};
+
+bool is_global(double y) {
+    return abs(y) < 0.05; // Zak³adamy ¿e globalne min jest bliskie 0
+}
+
+void lab4() {
     try {
-        // ================= ZADANIE 1: FUNKCJA TESTOWA =================
-        // f(x) = ... (wielomian)
-
-        // Punkt startowy (losowy lub z instrukcji)
-        matrix x0(2, 1);
-        x0(0) = 0.5; // Przyk³adowe wspó³rzêdne, instrukcja mówi o losowaniu z [-2, 2]
-        x0(1) = 0.5;
-
+        matrix ud1, ud2;
         double epsilon = 1e-5;
         int Nmax = 10000;
-        matrix ud1, ud2; // Puste dla funkcji testowej
 
-        // a) Metoda Najszybszego Spadku (Steepest Descent)
-        // h0 = 0.05 (sta³y krok)
-        solution sol_sd = SD(ff4T, gf4T, x0, 0.05, epsilon, Nmax, ud1, ud2);
-        cout << "SD (Test): " << sol_sd.y(0) << " w " << solution::f_calls << " wywolaniach." << endl;
-        solution::clear_calls();
+        // ---------------------------------------------------------
+        // TABELA 1 i TABELA 2 (Testowa)
+        // ---------------------------------------------------------
+        cout << "Generowanie Tabela 1 i Tabela 2..." << endl;
 
-        // b) Metoda Gradientów Sprzê¿onych (CG)
-        solution sol_cg = CG(ff4T, gf4T, x0, 0.05, epsilon, Nmax, ud1, ud2);
-        cout << "CG (Test): " << sol_cg.y(0) << " w " << solution::f_calls << " wywolaniach." << endl;
-        solution::clear_calls();
+        ofstream tab1("tabela1_wyniki.csv");
+        // Nag³ówek pasuj¹cy do Excela
+        tab1 << "Dlugosc kroku;Lp.;x1(0);x2(0);"
+             << "x1*;x2*;y*;f_calls;g_calls;Minimum globalne [TAK/NIE];"  // SD
+             << "x1*;x2*;y*;f_calls;g_calls;Minimum globalne [TAK/NIE];"  // CG
+             << "x1*;x2*;y*;f_calls;g_calls;H_calls;Minimum globalne [TAK/NIE]" // Newton
+             << endl;
 
-        // c) Metoda Newtona
-        solution sol_newton = Newton(ff4T, gf4T, Hf4T, x0, 0.05, epsilon, Nmax, ud1, ud2);
-        cout << "Newton (Test): " << sol_newton.y(0) << " w " << solution::f_calls << " wywolaniach." << endl;
-        solution::clear_calls();
+        ofstream tab2("tabela2_wyniki.csv");
+        tab2 << "Dlugosc kroku;"
+             << "x1*;x2*;y*;f_calls;g_calls;Liczba minimow globalnych;"
+             << "x1*;x2*;y*;f_calls;g_calls;Liczba minimow globalnych;"
+             << "x1*;x2*;y*;f_calls;g_calls;H_calls;Liczba minimow globalnych"
+             << endl;
+
+        double steps[] = {0.05, 0.25, -1.0}; // -1 oznacza zmiennokrokow¹
+        string step_names[] = {"0.05", "0.25", "Zmienna"};
+
+        std::random_device rd;
+        std::mt19937 gen(rd());
+        std::uniform_real_distribution<> dis(-2.0, 2.0);
+
+        // Dla ka¿dego kroku robimy 100 optymalizacji
+        for (int s = 0; s < 3; ++s) {
+            double h = steps[s];
+            string h_name = step_names[s];
+
+            // Zmienne do œrednich (Tabela 2)
+            double sum_sd[5] = {0}, sum_cg[5] = {0}, sum_n[6] = {0};
+            int glob_sd = 0, glob_cg = 0, glob_n = 0;
+
+            for (int i = 0; i < 100; ++i) {
+                matrix x0(2, 1);
+                x0(0) = dis(gen);
+                x0(1) = dis(gen);
+
+                tab1 << h_name << ";" << (i + 1) << ";" << d2s(x0(0)) << ";" << d2s(x0(1)) << ";";
+
+                // --- SD ---
+                clear_counters();
+                solution::clear_calls(); // <--- WA¯NA POPRAWKA (Reset licznika biblioteki)
+                solution sol = SD(ff4T, gf4T, x0, h, epsilon, Nmax, ud1, ud2);
+                bool g = is_global(sol.y(0));
+                tab1 << d2s(sol.x(0)) << ";" << d2s(sol.x(1)) << ";" << d2s(sol.y(0)) << ";"
+                     << f_calls_cnt << ";" << g_calls_cnt << ";" << (g ? "TAK" : "NIE") << ";";
+
+                if (g) {
+                    sum_sd[0]+=sol.x(0); sum_sd[1]+=sol.x(1); sum_sd[2]+=sol.y(0);
+                    sum_sd[3]+=f_calls_cnt; sum_sd[4]+=g_calls_cnt;
+                    glob_sd++;
+                }
+
+                // --- CG ---
+                clear_counters();
+                solution::clear_calls(); // <--- WA¯NA POPRAWKA
+                sol = CG(ff4T, gf4T, x0, h, epsilon, Nmax, ud1, ud2);
+                g = is_global(sol.y(0));
+                tab1 << d2s(sol.x(0)) << ";" << d2s(sol.x(1)) << ";" << d2s(sol.y(0)) << ";"
+                     << f_calls_cnt << ";" << g_calls_cnt << ";" << (g ? "TAK" : "NIE") << ";";
+
+                if (g) {
+                    sum_cg[0]+=sol.x(0); sum_cg[1]+=sol.x(1); sum_cg[2]+=sol.y(0);
+                    sum_cg[3]+=f_calls_cnt; sum_cg[4]+=g_calls_cnt;
+                    glob_cg++;
+                }
+
+                // --- Newton ---
+                clear_counters();
+                solution::clear_calls(); // <--- WA¯NA POPRAWKA
+                sol = Newton(ff4T, gf4T, Hf4T, x0, h, epsilon, Nmax, ud1, ud2);
+                g = is_global(sol.y(0));
+                tab1 << d2s(sol.x(0)) << ";" << d2s(sol.x(1)) << ";" << d2s(sol.y(0)) << ";"
+                     << f_calls_cnt << ";" << g_calls_cnt << ";" << h_calls_cnt << ";" << (g ? "TAK" : "NIE");
+
+                if (g) {
+                    sum_n[0]+=sol.x(0); sum_n[1]+=sol.x(1); sum_n[2]+=sol.y(0);
+                    sum_n[3]+=f_calls_cnt; sum_n[4]+=g_calls_cnt; sum_n[5]+=h_calls_cnt;
+                    glob_n++;
+                }
+
+                tab1 << endl;
+            }
+
+            // Zapisz œrednie do Tabela 2
+            auto avg = [](double sum, int n) { return n > 0 ? d2s(sum/n) : "0"; };
+
+            tab2 << h_name << ";";
+            tab2 << avg(sum_sd[0], glob_sd) << ";" << avg(sum_sd[1], glob_sd) << ";" << avg(sum_sd[2], glob_sd) << ";"
+                 << avg(sum_sd[3], glob_sd) << ";" << avg(sum_sd[4], glob_sd) << ";" << glob_sd << ";";
+
+            tab2 << avg(sum_cg[0], glob_cg) << ";" << avg(sum_cg[1], glob_cg) << ";" << avg(sum_cg[2], glob_cg) << ";"
+                 << avg(sum_cg[3], glob_cg) << ";" << avg(sum_cg[4], glob_cg) << ";" << glob_cg << ";";
+
+            tab2 << avg(sum_n[0], glob_n) << ";" << avg(sum_n[1], glob_n) << ";" << avg(sum_n[2], glob_n) << ";"
+                 << avg(sum_n[3], glob_n) << ";" << avg(sum_n[4], glob_n) << ";" << avg(sum_n[5], glob_n) << ";" << glob_n << endl;
+        }
+        tab1.close();
+        tab2.close();
 
 
-        // ================= ZADANIE 2: PROBLEM RZECZYWISTY =================
-        // Regresja logistyczna
+        // ---------------------------------------------------------
+        // TABELA 3 (Klasyfikator)
+        // ---------------------------------------------------------
+        cout << "Generowanie Tabela 3 (Klasyfikator)..." << endl;
+        ofstream tab3("klasyfikator_wyniki.csv");
+        tab3 << "Dlugosc kroku;theta0*;theta1*;theta2*;J(theta*);P(theta*);g_calls" << endl;
 
-        // 1. Wczytanie danych z plików
-        // XData: 3 wiersze, 100 kolumn
-        matrix X(3, 100);
+        matrix X(3, 100), Y(1, 100);
         read_lab4_data("XData.txt", X, 3, 100);
-
-        // YData: 1 wiersz, 100 kolumn
-        matrix Y(1, 100);
         read_lab4_data("YData.txt", Y, 1, 100);
 
-    	// ===== WERYFIKACJA Z INSTRUKCJI (STR. 3) =====
-    	matrix theta_test(3, 1);
-    	theta_test(0) = 0.1;
-    	theta_test(1) = 0.1;
-    	theta_test(2) = 0.1;
+        double real_steps[] = {0.01, 0.001, 0.0001};
+        for(double h : real_steps) {
+            matrix theta0(3, 1); // Zera
+            theta0(0)=0; theta0(1)=0; theta0(2)=0;
 
-    	// Wczytaj dane (jeœli jeszcze nie s¹ wczytane w tym miejscu kodu)
-    	matrix X_check(3, 100);
-    	read_lab4_data("XData.txt", X_check, 3, 100);
-    	matrix Y_check(1, 100);
-    	read_lab4_data("YData.txt", Y_check, 1, 100);
+            clear_counters();
+            solution::clear_calls(); // <--- WA¯NA POPRAWKA
+            // U¿ywamy CG zgodnie z instrukcj¹
+            solution sol = CG(ff4R, gf4R, theta0, h, epsilon, Nmax, X, Y);
 
-    	// Oblicz J i Gradient
-    	matrix J_val = ff4R(theta_test, X_check, Y_check);
-    	matrix Grad_val = gf4R(theta_test, X_check, Y_check);
+            // Oblicz P(theta) - accuracy
+            int correct = 0;
+            for(int i=0; i<100; ++i) {
+                double z = (trans(sol.x) * X[i])(0,0);
+                double h_val = 1.0/(1.0+exp(-z));
+                if ( (h_val>=0.5 && Y(0,i)==1) || (h_val<0.5 && Y(0,i)==0) ) correct++;
+            }
+            double acc = (double)correct; // 100 próbek, wiêc liczba poprawnych to te¿ procent
 
-    	cout << "===== WERYFIKACJA =====" << endl;
-    	cout << "Oczekiwane J: ok. 2.72715" << endl;
-    	cout << "Obliczone J:  " << J_val(0) << endl;
-    	cout << "Oczekiwany Gradient: [0.299, 13.60, 13.35]" << endl;
-    	cout << "Obliczony Gradient: " << endl << Grad_val << endl;
-    	cout << "=======================" << endl;
+            tab3 << h << ";"
+                 << d2s(sol.x(0)) << ";" << d2s(sol.x(1)) << ";" << d2s(sol.x(2)) << ";"
+                 << d2s(sol.y(0)) << ";" << acc << "%" << ";" << g_calls_cnt << endl;
+        }
+        tab3.close();
 
-        // 2. Optymalizacja
-        // Parametry theta (3x1), startujemy od zer
-        matrix theta0(3, 1);
-        theta0(0) = 0; theta0(1) = 0; theta0(2) = 0;
 
-        // U¿ywamy X jako ud1 i Y jako ud2
-        // Metoda Gradientów Sprzê¿onych, krok 0.01 (zgodnie z instrukcj¹ dla sta³okrokowej)
-        solution sol_real = CG(ff4R, gf4R, theta0, 0.01, epsilon, Nmax, X, Y);
+        // ---------------------------------------------------------
+        // WYKRESY (Œcie¿ki optymalizacji)
+        // ---------------------------------------------------------
+        cout << "Generowanie danych do Wykresow..." << endl;
+        ofstream wyk("wykresy_wyniki.csv");
+        // Punkt startowy (ustalony na sztywno, ¿eby wykres by³ powtarzalny)
+        matrix x0_chart(2, 1);
+        x0_chart(0) = -1.5; x0_chart(1) = 1.0;
 
-        cout << "Problem rzeczywisty (CG): J = " << sol_real.y(0) << endl;
-        cout << "Znalezione parametry theta:" << endl;
-        cout << sol_real.x << endl;
+        // Tablica na przechowywanie œcie¿ek: [Metoda][Wariant][Krok]
+        // Metody: 0=SD, 1=CG, 2=Newton
+        // Warianty: 0=0.05, 1=0.25, 2=Var
+        vector<string> paths[3][3];
+        int max_len = 0;
 
-    }
-    catch (string ex) {
-        cout << "Blad w lab4: " << ex << endl;
+        for(int m=0; m<3; ++m) {
+            for(int v=0; v<3; ++v) {
+                double h = steps[v];
+                chart_recorder = &paths[m][v]; // Podpinamy rejestrator
+
+                clear_counters();
+                solution::clear_calls(); // <--- WA¯NA POPRAWKA
+                if(m==0) SD(ff4T, gf4T, x0_chart, h, epsilon, Nmax, ud1, ud2);
+                if(m==1) CG(ff4T, gf4T, x0_chart, h, epsilon, Nmax, ud1, ud2);
+                if(m==2) Newton(ff4T, gf4T, Hf4T, x0_chart, h, epsilon, Nmax, ud1, ud2);
+
+                if(paths[m][v].size() > max_len) max_len = paths[m][v].size();
+            }
+        }
+        chart_recorder = nullptr; // Odpinamy
+
+        // Zapis do CSV kolumnami
+        wyk << "Nr iteracji;"
+            << "SD_0.05_x1;SD_0.05_x2;SD_0.25_x1;SD_0.25_x2;SD_Var_x1;SD_Var_x2;"
+            << "CG_0.05_x1;CG_0.05_x2;CG_0.25_x1;CG_0.25_x2;CG_Var_x1;CG_Var_x2;"
+            << "N_0.05_x1;N_0.05_x2;N_0.25_x1;N_0.25_x2;N_Var_x1;N_Var_x2" << endl;
+
+        for(int i=0; i<max_len; ++i) {
+            wyk << (i+1) << ";";
+            for(int m=0; m<3; ++m) {
+                for(int v=0; v<3; ++v) {
+                    if(i < paths[m][v].size()) wyk << paths[m][v][i] << ";";
+                    else wyk << ";;"; // puste komórki
+                }
+            }
+            wyk << endl;
+        }
+        wyk.close();
+
+        cout << "Gotowe! Utworzono 4 pliki CSV." << endl;
+
+    } catch (string ex) {
+        cout << "Blad: " << ex << endl;
     }
 }
 

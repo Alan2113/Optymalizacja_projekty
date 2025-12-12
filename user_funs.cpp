@@ -3,6 +3,18 @@
 #include <cmath>
 #include <limits>
 
+
+// --- GLOBALNE LICZNIKI (do statystyk) ---
+int f_calls_cnt = 0;
+int g_calls_cnt = 0;
+int h_calls_cnt = 0;
+
+void clear_counters() {
+	f_calls_cnt = 0;
+	g_calls_cnt = 0;
+	h_calls_cnt = 0;
+}
+
 // Stała PI (MSVC nie posiada M_PI)
 static const double PI = 3.14159265358979323846;
 
@@ -533,6 +545,7 @@ matrix ff3R(matrix x, matrix ud1, matrix ud2)
 // f(x) = 1/6*x1^6 - 1.05*x1^4 + 2*x1^2 + x2^2 + x1*x2
 matrix ff4T(matrix x, matrix ud1, matrix ud2)
 {
+	f_calls_cnt++;
     matrix y;
     double x1 = x(0);
     double x2 = x(1);
@@ -544,6 +557,7 @@ matrix ff4T(matrix x, matrix ud1, matrix ud2)
 // Gradient funkcji testowej
 matrix gf4T(matrix x, matrix ud1, matrix ud2)
 {
+	g_calls_cnt++;
     matrix g(2, 1);
     double x1 = x(0);
     double x2 = x(1);
@@ -556,6 +570,7 @@ matrix gf4T(matrix x, matrix ud1, matrix ud2)
 // Hesjan funkcji testowej (do metody Newtona)
 matrix Hf4T(matrix x, matrix ud1, matrix ud2)
 {
+	h_calls_cnt++;
     matrix H(2, 2);
     double x1 = x(0);
     // double x2 = x(1); // niewykorzystane w drugich pochodnych
@@ -578,6 +593,7 @@ matrix Hf4T(matrix x, matrix ud1, matrix ud2)
 // --- Problem Rzeczywisty (Real Problem) - Regresja Logistyczna ---
 matrix ff4R(matrix x, matrix ud1, matrix ud2)
 {
+	f_calls_cnt++;
 	matrix y;
 	matrix X = ud1;
 	matrix Y = ud2;
@@ -612,6 +628,7 @@ matrix ff4R(matrix x, matrix ud1, matrix ud2)
 
 matrix gf4R(matrix x, matrix ud1, matrix ud2)
 {
+	g_calls_cnt++;
 	matrix X = ud1;
 	matrix Y = ud2;
 

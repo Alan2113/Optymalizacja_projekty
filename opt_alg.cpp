@@ -1,5 +1,9 @@
 ﻿#include"opt_alg.h"
 #include <cmath>
+#include <vector>
+#include <string>
+// Wskaźnik na wektor, do którego będziemy zrzucać punkty (x1, x2) dla wykresu
+std::vector<std::string>* chart_recorder = nullptr;
 
 // ====== GLOBALNE DO FUNKCJI KARY ======
 static matrix(*__ff_base)(matrix, matrix, matrix);
@@ -679,11 +683,20 @@ solution SD(matrix(*ff)(matrix, matrix, matrix), matrix(*gf)(matrix, matrix, mat
 
 		while (solution::f_calls < Nmax)
 		{
+			// --- LOGOWANIE DO WYKRESU ---
+			if (chart_recorder != nullptr) {
+				// Zapisujemy "x1;x2"
+				std::ostringstream oss;
+				oss << x.x(0) << ";" << x.x(1);
+				chart_recorder->push_back(oss.str());
+			}
+			// -----------------------------
+
 			// ============================================================
 			// WYPISYWANIE DANYCH DO EXCELA (Wykres ścieżki optymalizacji)
 			// Wypisuje: x1, x2
 			// ============================================================
-			std::cout << x.x(0) << "," << x.x(1) << std::endl;
+			//std::cout << x.x(0) << "," << x.x(1) << std::endl;
 			// ============================================================
 
 			matrix grad = gf(x.x, ud1, ud2);
@@ -734,6 +747,14 @@ solution CG(matrix(*ff)(matrix, matrix, matrix), matrix(*gf)(matrix, matrix, mat
 
 		while (solution::f_calls < Nmax)
 		{
+			// --- LOGOWANIE DO WYKRESU ---
+			if (chart_recorder != nullptr) {
+				// Zapisujemy "x1;x2"
+				std::ostringstream oss;
+				oss << x.x(0) << ";" << x.x(1);
+				chart_recorder->push_back(oss.str());
+			}
+			// -----------------------------
 			double h;
 			if (h0 < 0) h = h_golden(ff, x.x, d, 100, ud1, ud2);
 			else h = h0;
@@ -786,6 +807,14 @@ solution Newton(matrix(*ff)(matrix, matrix, matrix), matrix(*gf)(matrix, matrix,
 
 		while (solution::f_calls < Nmax)
 		{
+			// --- LOGOWANIE DO WYKRESU ---
+			if (chart_recorder != nullptr) {
+				// Zapisujemy "x1;x2"
+				std::ostringstream oss;
+				oss << x.x(0) << ";" << x.x(1);
+				chart_recorder->push_back(oss.str());
+			}
+			// -----------------------------
 			matrix grad = gf(x.x, ud1, ud2);
 			matrix H = Hf(x.x, ud1, ud2);
 			d = -inv(H) * grad;
