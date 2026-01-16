@@ -657,3 +657,111 @@ matrix gf4R(matrix x, matrix ud1, matrix ud2)
 	return g;
 }
 
+
+
+// --- PROBLEM TESTOWY (Test Function) ---
+// ud1: przechowuje parametr 'a' w komórce (0,0) oraz wagę 'w' w (1,0)
+matrix ff5T(matrix x, matrix ud1, matrix ud2) {
+    matrix y(1, 1);
+    double x1 = x(0);
+    double x2 = x(1);
+
+    // Pobranie parametrów
+    double a = ud1(0); // parametr 'a' z instrukcji
+    double w = ud1(1); // waga 'w' z metody sumy ważonej
+
+    // Funkcje składowe
+    double f1 = a * (pow(x1 - 3, 2) + pow(x2 - 3, 2));
+    double f2 = (1.0 / a) * (pow(x1 + 3, 2) + pow(x2 + 3, 2));
+
+    // Suma ważona
+    y(0) = w * f1 + (1.0 - w) * f2;
+    return y;
+}
+
+// Funkcja testowa nie potrzebuje gradientu dla metody Powella,
+// ale biblioteka może wymagać istnienia funkcji (nawet pustej).
+matrix gf5T(matrix x, matrix ud1, matrix ud2) {
+    return matrix(2, 1); // Zwraca zera, nieużywane w Powellu
+}
+
+
+// --- PROBLEM RZECZYWISTY (Belka) ---
+// x(0) -> l (długość), x(1) -> d (średnica)
+// ud1: waga 'w' w (0,0)
+// ud2: przechowuje wartości do normalizacji: [f1_min, f1_max, f2_min, f2_max]
+matrix ff5R(matrix x, matrix ud1, matrix ud2) {
+    matrix y(1, 1);
+    double l = x(0); // długość [m]
+    double d = x(1); // średnica [m]
+
+    // Parametry fizyczne
+    double P = 1000.0;
+    double E = 2.07e11;
+    double rho = 7800.0;
+    double S_max = 300e6;
+    double U_max = 0.005;
+
+    // --- MIĘKKA KARA (Soft Constraint) ---
+    // Zamiast sztywnego return 1e10, dodajemy karę zależną od odległości.
+    // Dzięki temu algorytm wie, jak wrócić do dozwolonego obszaru.
+
+    double penalty = 0.0;
+
+    // Sprawdzanie granic l [0.2, 1.0]
+    if (l < 0.2) penalty += pow(0.2 - l, 2) * 1e12; // Kara kwadratowa
+    if (l > 1.0) penalty += pow(l - 1.0, 2) * 1e12;
+
+    // Sprawdzanie granic d [0.01, 0.05]
+    if (d < 0.01) penalty += pow(0.01 - d, 2) * 1e12;
+    if (d > 0.05) penalty += pow(d - 0.05, 2) * 1e12;
+
+    // Jeśli naruszono granice geometryczne, zwracamy samą karę (plus dużą stałą)
+    if (penalty > 0.0) {
+        y(0) = 1e10 + penalty;
+        return y;
+    }
+
+    // Obliczenia fizyczne (tylko jeśli jesteśmy w środku pudełka)
+    double mass = rho * (3.14159265 * d * d / 4.0) * l;
+    double deflection = (64 * P * pow(l, 3)) / (3 * E * 3.14159265 * pow(d, 4));
+    double stress = (32 * P * l) / (3.14159265 * pow(d, 3));
+
+    // Sprawdzenie ograniczeń wytrzymałościowych
+    if (stress > S_max) penalty += pow(stress - S_max, 2);
+    if (deflection > U_max) penalty += pow(deflection - U_max, 2) * 1e10;
+
+    if (penalty > 0.0) {
+        y(0) = 1e10 + penalty;
+        return y;
+    }
+
+    // Normalizacja i suma ważona
+    // ... (reszta kodu bez zmian, ale wklejam dla pewności)
+	// ... (początek ff5R bez zmian)
+
+	// Normalizacja i suma ważona
+	double w = ud1(0);
+
+	// WAŻNE: Tutaj musi być [0] (liczba wierszy), a nie [1]
+	if (get_size(ud2)[0] >= 4) {
+		double f1_min = ud2(0); double f1_max = ud2(1);
+		double f2_min = ud2(2); double f2_max = ud2(3);
+
+		double f1_norm = (abs(f1_max - f1_min) > 1e-9) ? (mass - f1_min) / (f1_max - f1_min) : 1.0;
+		double f2_norm = (abs(f2_max - f2_min) > 1e-9) ? (deflection - f2_min) / (f2_max - f2_min) : 1.0;
+
+		y(0) = w * f1_norm + (1.0 - w) * f2_norm;
+	} else {
+		// Fallback
+		if (w == 1.0) y(0) = mass;
+		else y(0) = deflection;
+	}
+
+	return y;
+}
+
+matrix gf5R(matrix x, matrix ud1, matrix ud2) {
+    return matrix(2, 1); // Nieużywane
+}
+

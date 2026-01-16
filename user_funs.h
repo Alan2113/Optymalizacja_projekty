@@ -21,3 +21,10 @@ matrix Hf4T(matrix x, matrix ud1, matrix ud2);
 
 matrix ff4R(matrix x, matrix ud1, matrix ud2);
 matrix gf4R(matrix x, matrix ud1, matrix ud2);
+
+// --- LAB 5 ---
+matrix ff5T(matrix x, matrix ud1, matrix ud2);
+matrix gf5T(matrix x, matrix ud1, matrix ud2);
+
+matrix ff5R(matrix x, matrix ud1, matrix ud2);
+matrix gf5R(matrix x, matrix ud1, matrix ud2);

@@ -79,20 +79,10 @@ string check_minimum_type(double x_opt, double f_opt) {
 	return "Brak zbieznosci";
 }
 
-int main()
-{
-	try
-	{
-		//lab2_wykres_pelny();
-		//lab3();  // Zamiast lab1()
-
-		lab4();
-	}
-	catch (string EX_INFO)
-	{
-		cerr << "ERROR:\n";
-		cerr << EX_INFO << endl << endl;
-	}
+int main() {
+	// lab4(); // zakomentowane stare laby
+	lab5();
+	system("pause");
 	return 0;
 }
 
@@ -1286,7 +1276,7 @@ void lab3()
 
 
 
-
+/*
 
 void read_lab4_data(string filename, matrix& M, int rows, int cols) {
     ifstream file(filename);
@@ -1547,11 +1537,176 @@ void lab4() {
         cout << "Blad: " << ex << endl;
     }
 }
+*/
 
-void lab5()
-{
-
+// Funkcja pomocnicza do konwersji double na string (dla CSV)
+string d2s(double val) {
+    stringstream ss;
+    ss << fixed << setprecision(6) << val;
+    return ss.str();
 }
+
+void lab5() {
+    try {
+        // Parametry ogólne
+        double epsilon = 1e-5;
+        int Nmax = 10000;  // Limit wywo³añ (dla Powella mo¿e byæ potrzebny spory)
+
+        // Generatory liczb losowych
+        random_device rd;
+        mt19937 gen(rd());
+        // Dla funkcji testowej [-10, 10]
+        uniform_real_distribution<> dis_test(-10.0, 10.0);
+        // Dla belki (zakresy dopuszczalne: l [0.2, 1.0], d [0.01, 0.05])
+        uniform_real_distribution<> dis_l(0.2, 1.0);
+        uniform_real_distribution<> dis_d(0.01, 0.05);
+
+
+        // =============================================================
+        // CZÊŒÆ 1: FUNKCJA TESTOWA (Tabela 1)
+        // =============================================================
+        cout << "Rozpoczynam obliczenia dla Funkcji Testowej..." << endl;
+
+        ofstream t1("wyniki_lab5_tabela1.csv");
+        t1 << "a;w;x1;x2;f1(x);f2(x);Liczba wywolan" << endl;
+
+        double A_values[] = { 1.0, 10.0, 100.0 };
+        matrix ud1(2, 1); // [a, w]
+        matrix ud2;       // nieu¿ywane w testowej
+
+        for (double a : A_values) {
+            cout << "  > Przetwarzanie dla a = " << a << "..." << endl;
+
+            // Dla ka¿dego 'a' losujemy jeden punkt startowy i u¿ywamy go dla wszystkich wag
+            // (¿eby wyniki by³y g³adkie na wykresie)
+            matrix x0(2, 1);
+            x0(0) = dis_test(gen);
+            x0(1) = dis_test(gen);
+
+            // Iteracja po wagach w od 0 do 1 co 0.01
+            for (double w = 0.0; w <= 1.0001; w += 0.01) {
+                ud1(0) = a;
+                ud1(1) = w;
+
+                solution::clear_calls();
+                // Uruchamiamy Metodê Powella
+                solution sol = Powell(ff5T, x0, epsilon, Nmax, ud1, ud2);
+
+                // Musimy rêcznie policzyæ wartoœci f1 i f2 dla znalezionego punktu
+                // ¿eby zapisaæ je do tabeli (do wykresu Pareto)
+                double x1 = sol.x(0);
+                double x2 = sol.x(1);
+                double f1 = a * (pow(x1 - 3, 2) + pow(x2 - 3, 2));
+                double f2 = (1.0 / a) * (pow(x1 + 3, 2) + pow(x2 + 3, 2));
+
+                t1 << a << ";" << w << ";"
+                   << d2s(x1) << ";" << d2s(x2) << ";"
+                   << d2s(f1) << ";" << d2s(f2) << ";"
+                   << solution::f_calls << endl;
+
+                // Dobr¹ praktyk¹ w tworzeniu frontu Pareto jest branie wyniku poprzedniej iteracji
+                // jako startu do nastêpnej (przyspiesza obliczenia)
+                x0 = sol.x;
+            }
+        }
+        t1.close();
+        cout << "Zapisano wyniki_lab5_tabela1.csv" << endl << endl;
+
+
+        // =============================================================
+        // CZÊŒÆ 2: PROBLEM RZECZYWISTY - BELKA (Tabela 2)
+        // =============================================================
+        cout << "Rozpoczynam obliczenia dla Problemu Belki..." << endl;
+
+        // KROK A: Normalizacja (Szukamy f1_min, f1_max, f2_min, f2_max)
+        // Uruchamiamy optymalizacjê dla w=1 (tylko masa) i w=0 (tylko ugiêcie)
+        // ¿eby poznaæ zakresy wartoœci.
+
+    	cout << "  > Normalizacja (szukanie ekstremow)..." << endl;
+    	matrix x0_beam(2, 1);
+    	// USTAW TO NA SZTYWNO W BEZPIECZNYM MIEJSCU:
+    	x0_beam(0) = 0.5;  // D³ugoœæ l = 0.5m (bezpieczny œrodek)
+    	x0_beam(1) = 0.03; // Œrednica d = 3cm (bezpieczny œrodek)
+
+    	matrix ud1_beam(2, 1);
+    	matrix ud2_norm;
+
+        // 1. Minimalizacja masy (w=1) -> daje f1_min i f2_max
+        ud1_beam(0) = 1.0;
+        solution::clear_calls();
+        solution sol_mass = Powell(ff5R, x0_beam, epsilon, Nmax, ud1_beam, ud2_norm);
+
+        // Obliczamy wartoœci fizyczne w tym punkcie
+        double l = sol_mass.x(0);
+        double d = sol_mass.x(1);
+        double f1_min = 7800.0 * (3.14159265 * d * d / 4.0) * l; // Masa
+        double f2_at_min_mass = (64 * 1000.0 * pow(l, 3)) / (3 * 2.07e11 * 3.14159265 * pow(d, 4));
+
+        // 2. Minimalizacja ugiêcia (w=0) -> daje f2_min i f1_max
+        ud1_beam(0) = 0.0;
+        solution::clear_calls();
+        solution sol_defl = Powell(ff5R, x0_beam, epsilon, Nmax, ud1_beam, ud2_norm);
+
+        l = sol_defl.x(0);
+        d = sol_defl.x(1);
+        double f1_at_min_defl = 7800.0 * (3.14159265 * d * d / 4.0) * l;
+        double f2_min = (64 * 1000.0 * pow(l, 3)) / (3 * 2.07e11 * 3.14159265 * pow(d, 4));
+
+        // Zapisujemy granice do normalizacji: [f1_min, f1_max, f2_min, f2_max]
+        // U¿ywamy wartoœci "skrzy¿owanych" jako maxów, bo to definiuje nasz zakres roboczy
+        double f1_max = f1_at_min_defl;
+        double f2_max = f2_at_min_mass;
+
+        // Wype³niamy macierz ud2 danymi do normalizacji
+        ud2_norm = matrix(4, 1);
+        ud2_norm(0) = f1_min; ud2_norm(1) = f1_max;
+        ud2_norm(2) = f2_min; ud2_norm(3) = f2_max;
+
+        cout << "    Znaleziono zakresy:" << endl;
+        cout << "    Masa (f1): " << f1_min << " - " << f1_max << " [kg]" << endl;
+        cout << "    Ugiecie (f2): " << f2_min << " - " << f2_max << " [m]" << endl;
+
+
+    	// KROK B: W³aœciwa pêtla optymalizacji (Front Pareto)
+    	ofstream t2("wyniki_lab5_tabela2.csv");
+    	t2 << "w;l;d;Masa[kg];Ugiecie[m];Liczba wywolan" << endl;
+
+    	for (double w = 0.0; w <= 1.0001; w += 0.01) {
+    		ud1_beam(0) = w;
+
+    		// --- RESET PUNKTU STARTOWEGO (TO NAPRAWI SKOKI) ---
+    		// Zamiast braæ wynik z poprzedniej pêtli, zawsze startujemy ze œrodka.
+    		x0_beam(0) = 0.5;  // bezpieczna d³ugoœæ
+    		x0_beam(1) = 0.03; // bezpieczna œrednica
+    		// --------------------------------------------------
+
+    		solution::clear_calls();
+    		solution sol = Powell(ff5R, x0_beam, epsilon, Nmax, ud1_beam, ud2_norm);
+
+    		l = sol.x(0);
+    		d = sol.x(1);
+    		double mass = 7800.0 * (3.14159265 * d * d / 4.0) * l;
+    		double defl = (64 * 1000.0 * pow(l, 3)) / (3 * 2.07e11 * 3.14159265 * pow(d, 4));
+
+    		t2 << w << ";"
+			   << d2s(l) << ";" << d2s(d) << ";"
+			   << d2s(mass) << ";" << d2s(defl) << ";"
+			   << solution::f_calls << endl;
+
+    		// USUNELIŒMY LINIÊ: x0_beam = sol.x;
+    	}
+
+        t2.close();
+        cout << "Zapisano wyniki_lab5_tabela2.csv" << endl;
+        cout << "Gotowe!" << endl;
+
+    }
+    catch (string ex) {
+        cout << "Blad krytyczny: " << ex << endl;
+    }
+}
+
+
 
 void lab6()
 {

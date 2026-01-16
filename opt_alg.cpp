@@ -847,75 +847,126 @@ solution Newton(matrix(*ff)(matrix, matrix, matrix), matrix(*gf)(matrix, matrix,
 	}
 }
 
+
+
 // =============================================================
-// METODA ZŁOTEGO PODZIAŁU 1D
+// FUNKCJA POMOCNICZA DLA POWELLA (Szukanie kroku h)
 // =============================================================
-solution golden(matrix(*ff)(matrix, matrix, matrix), double a, double b, double epsilon, int Nmax, matrix ud1, matrix ud2)
+double h_golden(matrix(*ff)(matrix, matrix, matrix), matrix x0, matrix d, double limit, matrix ud1, matrix ud2)
 {
-	try
-	{
-		solution Xopt;
-		double alpha = 0.6180339887;
-		double a_i = a;
-		double b_i = b;
-		double c_i = b_i - alpha * (b_i - a_i);
-		double d_i = a_i + alpha * (b_i - a_i);
+    double alpha = 0.618033988;
+    double a = -limit; // Szukamy w obie strony od punktu x0
+    double b = limit;
+    double c = b - alpha * (b - a);
+    double d_gold = a + alpha * (b - a);
+    double epsilon = 1e-7;
 
-		solution C(c_i); C.fit_fun(ff, ud1, ud2);
-		solution D(d_i); D.fit_fun(ff, ud1, ud2);
+    while ((b - a) > epsilon)
+    {
+        matrix x_c = x0 + d * c;
+        matrix x_d = x0 + d * d_gold;
 
-		while (solution::f_calls < Nmax)
-		{
-			if (C.y < D.y) {
-				b_i = d_i;
-				d_i = c_i;
-				D = C;
-				c_i = b_i - alpha * (b_i - a_i);
-				C.x = c_i;
-				C.fit_fun(ff, ud1, ud2);
-			}
-			else {
-				a_i = c_i;
-				c_i = d_i;
-				C = D;
-				d_i = a_i + alpha * (b_i - a_i);
-				D.x = d_i;
-				D.fit_fun(ff, ud1, ud2);
-			}
+        // Obliczamy wartości funkcji w punktach próbnych
+        // (Zmieniamy fit_fun na proste wywołanie, bo h_golden zwraca double)
+        double fc = ff(x_c, ud1, ud2)(0);
+        double fd = ff(x_d, ud1, ud2)(0);
+        solution::f_calls += 2; // Zliczamy wywołania!
 
-			if ((b_i - a_i) < epsilon) {
-				Xopt.x = (a_i + b_i) / 2.0;
-				Xopt.fit_fun(ff, ud1, ud2);
-				Xopt.flag = 1;
-				return Xopt;
-			}
-		}
-
-		Xopt.x = (a_i + b_i) / 2.0;
-		Xopt.fit_fun(ff, ud1, ud2);
-		Xopt.flag = 0;
-		return Xopt;
-	}
-	catch (string ex_info)
-	{
-		throw ("solution golden(...):\n" + ex_info);
-	}
+        if (fc < fd)
+        {
+            b = d_gold;
+            d_gold = c;
+            c = b - alpha * (b - a);
+        }
+        else
+        {
+            a = c;
+            c = d_gold;
+            d_gold = a + alpha * (b - a);
+        }
+    }
+    return (a + b) / 2.0;
 }
 
+
+// =============================================================
+// METODA POWELLA
+// =============================================================
 solution Powell(matrix(*ff)(matrix, matrix, matrix), matrix x0, double epsilon, int Nmax, matrix ud1, matrix ud2)
 {
-	try
-	{
-		solution Xopt;
-		// Tu wpisz kod funkcji (na razie puste)
-		return Xopt;
-	}
-	catch (string ex_info)
-	{
-		throw ("solution Powell(...):\n" + ex_info);
-	}
-}
+    try {
+        solution Xopt;
+        solution x(x0);
+        int n = get_dim(x0);
 
+        matrix d(n, n);
+        for (int i = 0; i < n; ++i) {
+            for(int j=0; j < n; ++j) d(i,j) = 0.0;
+            d(i, i) = 1.0;
+        }
+
+        x.fit_fun(ff, ud1, ud2);
+
+        // --- KLUCZOWA ZMIANA: DOPASOWANIE KROKU ---
+        double step_limit = 100.0; // Domyślnie duży (dla Testowej)
+
+        // Sprawdzamy czy to Belka (po obecności danych normalizacyjnych)
+        if (get_size(ud2)[0] >= 4) {
+            // Dla belki zmienne to np. 0.01 (średnica).
+            // Krok 0.5 to za dużo. Dajemy 0.05, żeby szukał precyzyjnie.
+            step_limit = 0.05;
+        }
+        // ------------------------------------------
+
+        while (solution::f_calls < Nmax)
+        {
+            matrix P = x.x;
+
+            // 1. Minimalizacja wzdłuż kierunków bazy
+            for (int i = 0; i < n; ++i) {
+                matrix di(n, 1);
+                for(int k=0; k<n; ++k) di(k) = d(k, i);
+
+                double h = h_golden(ff, x.x, di, step_limit, ud1, ud2);
+                x.x = x.x + di * h;
+            }
+            x.fit_fun(ff, ud1, ud2);
+
+            // 2. Warunek stopu
+            if (norm(x.x - P) < epsilon) {
+                Xopt = x;
+                Xopt.flag = 1;
+                return Xopt;
+            }
+
+            // 3. Nowy kierunek
+            matrix new_dir = x.x - P;
+            if (norm(new_dir) < 1e-9) {
+                 Xopt = x;
+                 Xopt.flag = 1;
+                 return Xopt;
+            }
+
+            // 4. Minimalizacja wzdłuż nowego kierunku
+            double h = h_golden(ff, x.x, new_dir, step_limit, ud1, ud2);
+            x.x = x.x + new_dir * h;
+            x.fit_fun(ff, ud1, ud2);
+
+            // 5. Aktualizacja bazy kierunków
+            for (int i = 0; i < n - 1; ++i) {
+                for(int k=0; k<n; ++k) d(k, i) = d(k, i+1);
+            }
+            for(int k=0; k<n; ++k) d(k, n-1) = new_dir(k);
+        }
+
+        Xopt = x;
+        Xopt.flag = 0;
+        return Xopt;
+    }
+    catch (string ex_info) {
+        throw ("solution Powell(...):\n" + ex_info);
+    }
+}
 solution EA(matrix(*ff)(matrix, matrix, matrix), int N, matrix lb, matrix ub, int mi, int lambda, matrix sigma0, double epsilon, int Nmax, matrix ud1, matrix ud2)
 {
 	try
