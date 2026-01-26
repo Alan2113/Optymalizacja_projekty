@@ -28,3 +28,8 @@ matrix gf5T(matrix x, matrix ud1, matrix ud2);
 
 matrix ff5R(matrix x, matrix ud1, matrix ud2);
 matrix gf5R(matrix x, matrix ud1, matrix ud2);
+
+// --- LAB 6 ---
+matrix ff6T(matrix x, matrix ud1, matrix ud2);
+matrix ff6R(matrix x, matrix ud1, matrix ud2);
+matrix df6(double t, matrix Y, matrix ud1, matrix ud2);

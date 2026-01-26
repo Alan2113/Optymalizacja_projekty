@@ -1,10 +1,10 @@
 /*********************************************
-Kod stanowi uzupe³nienie materia³ów do æwiczeñ
+Kod stanowi uzupe?nienie materia??w do ?wicze?
 w ramach przedmiotu metody optymalizacji.
-Kod udostêpniony na licencji CC BY-SA 3.0
-Autor: dr in¿. £ukasz Sztangret
+Kod udost?pniony na licencji CC BY-SA 3.0
+Autor: dr in?. ?ukasz Sztangret
 Katedra Informatyki Stosowanej i Modelowania
-Akademia Górniczo-Hutnicza
+Akademia G?rniczo-Hutnicza
 Data ostatniej modyfikacji: 30.09.2025
 *********************************************/
 //const double M_PI = 3.141592653589793238;
@@ -29,12 +29,12 @@ void lab4();
 void lab5();
 void lab6();
 
-// Funkcja pomocnicza: konwertuje liczbê na string z przecinkiem zamiast kropki
+// Funkcja pomocnicza: konwertuje liczb? na string z przecinkiem zamiast kropki
 string double_to_csv(double value) {
 	ostringstream oss;
-	oss << fixed << setprecision(6) << value;
+	oss << fixed << setprecision(10) << value;
 	string result = oss.str();
-	// Zamieñ kropkê na przecinek
+	// Zamie? kropk? na przecinek
 	size_t pos = result.find('.');
 	if (pos != string::npos) {
 		result[pos] = ',';
@@ -42,12 +42,12 @@ string double_to_csv(double value) {
 	return result;
 }
 
-// Funkcja pomocnicza: konwertuje MA£E liczby z wiêksz¹ precyzj¹ (10 cyfr)
+// Funkcja pomocnicza: konwertuje MA?E liczby z wi?ksz? precyzj? (10 cyfr)
 string double_to_csv_high_precision(double value) {
 	ostringstream oss;
 	oss << fixed << setprecision(10) << value;
 	string result = oss.str();
-	// Zamieñ kropkê na przecinek
+	// Zamie? kropk? na przecinek
 	size_t pos = result.find('.');
 	if (pos != string::npos) {
 		result[pos] = ',';
@@ -55,7 +55,7 @@ string double_to_csv_high_precision(double value) {
 	return result;
 }
 
-// Funkcja sprawdzaj¹ca typ znalezionego ekstremum
+// Funkcja sprawdzaj?ca typ znalezionego ekstremum
 // Dla funkcji testowej f(x) = x^2 - 1: minimum globalne to x=0, f=-1
 string check_minimum_type(double x_opt, double f_opt) {
 	// Dla f(x) = x^2 - 1: minimum globalne f = -1
@@ -75,13 +75,14 @@ string check_minimum_type(double x_opt, double f_opt) {
 		return "Minimum lokalne";
 	}
 
-	// 3. Brak zbie¿noœci: f daleko od -1 (s³aby wynik)
+	// 3. Brak zbie?no?ci: f daleko od -1 (s?aby wynik)
 	return "Brak zbieznosci";
 }
 
 int main() {
 	// lab4(); // zakomentowane stare laby
-	lab5();
+	//lab5();
+	lab6();
 	system("pause");
 	return 0;
 }
@@ -89,34 +90,34 @@ int main() {
 void lab0()
 {
 	//Funkcja testowa
-	double epsilon = 1e-2;									// dok³adnoœæ
-	int Nmax = 10000;										// maksymalna liczba wywo³añ funkcji celu
-	matrix lb(2, 1, -5), ub(2, 1, 5),						// dolne oraz górne ograniczenie
-		a(2, 1);											// dok³adne rozwi¹zanie optymalne
-	solution opt;											// rozwi¹zanie optymalne znalezione przez algorytm
+	double epsilon = 1e-10;									// dok?adno??
+	int Nmax = 10000;										// maksymalna liczba wywo?a? funkcji celu
+	matrix lb(2, 1, -5), ub(2, 1, 5),						// dolne oraz g?rne ograniczenie
+		a(2, 1);											// dok?adne rozwi?zanie optymalne
+	solution opt;											// rozwi?zanie optymalne znalezione przez algorytm
 	a(0) = -1;
 	a(1) = 2;
-	opt = MC(ff0T, 2, lb, ub, epsilon, Nmax, a);			// wywo³anie procedury optymalizacji
+	opt = MC(ff0T, 2, lb, ub, epsilon, Nmax, a);			// wywo?anie procedury optymalizacji
 	cout << opt << endl << endl;							// wypisanie wyniku
-	solution::clear_calls();								// wyzerowanie liczników
+	solution::clear_calls();								// wyzerowanie licznik?w
 
 	//Wahadlo
-	Nmax = 1000;											// dok³adnoœæ
-	epsilon = 1e-2;											// maksymalna liczba wywo³añ funkcji celu
-	lb = 0, ub = 5;											// dolne oraz górne ograniczenie
-	double teta_opt = 1;									// maksymalne wychylenie wahad³a
-	opt = MC(ff0R, 1, lb, ub, epsilon, Nmax, teta_opt);		// wywo³anie procedury optymalizacji
+	Nmax = 1000;											// dok?adno??
+	epsilon = 1e-2;											// maksymalna liczba wywo?a? funkcji celu
+	lb = 0, ub = 5;											// dolne oraz g?rne ograniczenie
+	double teta_opt = 1;									// maksymalne wychylenie wahad?a
+	opt = MC(ff0R, 1, lb, ub, epsilon, Nmax, teta_opt);		// wywo?anie procedury optymalizacji
 	cout << opt << endl << endl;							// wypisanie wyniku
-	solution::clear_calls();								// wyzerowanie liczników
+	solution::clear_calls();								// wyzerowanie licznik?w
 
 	//Zapis symulacji do pliku csv
-	matrix Y0 = matrix(2, 1),								// Y0 zawiera warunki pocz¹tkowe
-		MT = matrix(2, new double[2] { m2d(opt.x), 0.5 });	// MT zawiera moment si³y dzia³aj¹cy na wahad³o oraz czas dzia³ania
-	matrix* Y = solve_ode(df0, 0, 0.1, 10, Y0, NAN, MT);	// rozwi¹zujemy równanie ró¿niczkowe
-	ofstream Sout("symulacja_lab0.csv");					// definiujemy strumieñ do pliku .csv
+	matrix Y0 = matrix(2, 1),								// Y0 zawiera warunki pocz?tkowe
+		MT = matrix(2, new double[2] { m2d(opt.x), 0.5 });	// MT zawiera moment si?y dzia?aj?cy na wahad?o oraz czas dzia?ania
+	matrix* Y = solve_ode(df0, 0, 0.1, 10, Y0, NAN, MT);	// rozwi?zujemy r?wnanie r?niczkowe
+	ofstream Sout("symulacja_lab0.csv");					// definiujemy strumie? do pliku .csv
 	Sout << hcat(Y[0], Y[1]);								// zapisyjemy wyniki w pliku
-	Sout.close();											// zamykamy strumieñ
-	Y[0].~matrix();											// usuwamy z pamiêci rozwi¹zanie RR
+	Sout.close();											// zamykamy strumie?
+	Y[0].~matrix();											// usuwamy z pami?ci rozwi?zanie RR
 	Y[1].~matrix();
 }
 
@@ -162,7 +163,7 @@ void lab1()
 	int count_lag_min_local[3] = { 0, 0, 0 };
 	int count_lag_brak[3] = { 0, 0, 0 };
 
-	// NOWE: Szczegó³owe akumulatory dla KA¯DEJ kategorii osobno
+	// NOWE: Szczeg?owe akumulatory dla KA?DEJ kategorii osobno
 	// [alpha_idx][0=min_global, 1=min_local, 2=brak]
 	double sum_interval_cat[3][3] = { 0 };
 	double sum_exp_calls_cat[3][3] = { 0 };
@@ -195,7 +196,7 @@ void lab1()
 
 			// WALIDACJA: sprawdz czy przedzial jest poprawny
 			if (isnan(a) || isnan(b) || isinf(a) || isinf(b) || (b - a) < 1e-10 || a >= b) {
-				// Przedzia³ niepoprawny - u¿yj szerokiego przedzia³u wokó³ minimum
+				// Przedzia? niepoprawny - u?yj szerokiego przedzia?u wok? minimum
 				a = -10.0;
 				b = 10.0;
 			}
@@ -205,7 +206,7 @@ void lab1()
 			solution opt_fib = fib(ff1T, a, b, epsilon);
 			int calls_fib = solution::f_calls;
 
-			// WALIDACJA: sprawdŸ czy wynik jest poprawny
+			// WALIDACJA: sprawd? czy wynik jest poprawny
 			if (isnan(m2d(opt_fib.x)) || isnan(m2d(opt_fib.y))) {
 				opt_fib.x = 0.0;
 				opt_fib.y = -1.0;
@@ -217,7 +218,7 @@ void lab1()
 			solution opt_lag = lag(ff1T, a, b, epsilon, gamma, Nmax);
 			int calls_lag = solution::f_calls;
 
-			// WALIDACJA: sprawdŸ czy wynik jest poprawny
+			// WALIDACJA: sprawd? czy wynik jest poprawny
 			if (isnan(m2d(opt_lag.x)) || isnan(m2d(opt_lag.y))) {
 				opt_lag.x = 0.0;
 				opt_lag.y = -1.0;
@@ -280,14 +281,14 @@ void lab1()
 				lag_cat_idx = 2;
 			}
 
-			// NOWE: Akumulacja szczegó³owa dla kategorii Fibonacciego
+			// NOWE: Akumulacja szczeg?owa dla kategorii Fibonacciego
 			sum_interval_cat[alpha_idx][fib_cat_idx] += (b - a);
 			sum_exp_calls_cat[alpha_idx][fib_cat_idx] += calls_exp;
 			sum_fib_x_cat[alpha_idx][fib_cat_idx] += m2d(opt_fib.x);
 			sum_fib_f_cat[alpha_idx][fib_cat_idx] += m2d(opt_fib.y);
 			sum_fib_calls_cat[alpha_idx][fib_cat_idx] += calls_fib;
 
-			// NOWE: Akumulacja szczegó³owa dla kategorii Lagrange'a
+			// NOWE: Akumulacja szczeg?owa dla kategorii Lagrange'a
 			sum_lag_x_cat[alpha_idx][lag_cat_idx] += m2d(opt_lag.x);
 			sum_lag_f_cat[alpha_idx][lag_cat_idx] += m2d(opt_lag.y);
 			sum_lag_calls_cat[alpha_idx][lag_cat_idx] += calls_lag;
@@ -298,7 +299,7 @@ void lab1()
 
 	results_file.close();
 
-	// Tabela 2: Srednie + statystyki minimum/brak zbie¿noœci
+	// Tabela 2: Srednie + statystyki minimum/brak zbie?no?ci
 	ofstream avg_file("wyniki_lab1_tabela2.csv");
 	avg_file << "Alpha;Sredni_przedzial;Srednie_calls_exp;Srednie_x_fib;Srednie_f_fib;Srednie_calls_fib;"
 		<< "Fib_min_global;Fib_min_lokalne;Fib_brak;Srednie_x_lag;Srednie_f_lag;Srednie_calls_lag;"
@@ -307,23 +308,23 @@ void lab1()
 	for (int i = 0; i < 3; i++) {
 		avg_file << double_to_csv(alphas[i]) << ";"
 			<< double_to_csv(sum_interval[i] / num_repeats) << ";"
-			<< (int)round(sum_exp_calls[i] / num_repeats) << ";"  // Zaokr¹glone do int
+			<< (int)round(sum_exp_calls[i] / num_repeats) << ";"  // Zaokr?glone do int
 			<< double_to_csv(sum_fib_x[i] / num_repeats) << ";"
 			<< double_to_csv(sum_fib_f[i] / num_repeats) << ";"
-			<< (int)round(sum_fib_calls[i] / num_repeats) << ";"  // Zaokr¹glone do int
+			<< (int)round(sum_fib_calls[i] / num_repeats) << ";"  // Zaokr?glone do int
 			<< count_fib_min_global[i] << ";"
 			<< count_fib_min_local[i] << ";"
 			<< count_fib_brak[i] << ";"
 			<< double_to_csv(sum_lag_x[i] / num_repeats) << ";"
 			<< double_to_csv(sum_lag_f[i] / num_repeats) << ";"
-			<< (int)round(sum_lag_calls[i] / num_repeats) << ";"  // Zaokr¹glone do int
+			<< (int)round(sum_lag_calls[i] / num_repeats) << ";"  // Zaokr?glone do int
 			<< count_lag_min_global[i] << ";"
 			<< count_lag_min_local[i] << ";"
 			<< count_lag_brak[i] << endl;
 	}
 	avg_file.close();
 
-	// NOWA TABELA 2B: Szczegó³owe œrednie dla KA¯DEJ kategorii osobno (format pionowy)
+	// NOWA TABELA 2B: Szczeg?owe ?rednie dla KA?DEJ kategorii osobno (format pionowy)
 	ofstream detailed_file("wyniki_lab1_tabela2b_szczegoly.csv");
 	detailed_file << "Alpha;b-a;Liczba_wywolan_exp;Rodzaj_minimum;"
 		<< "x_fib;y_fib;Liczba_wywolan_fib;Liczba_wystapien_fib;"
@@ -350,7 +351,7 @@ void lab1()
 				count_lag_cat = count_lag_brak[alpha_idx];
 			}
 
-			// Œrednie dla tej kategorii (jeœli count > 0)
+			// ?rednie dla tej kategorii (je?li count > 0)
 			double avg_interval = (count_fib_cat > 0) ? sum_interval_cat[alpha_idx][cat_idx] / count_fib_cat : 0.0;
 			double avg_exp_calls = (count_fib_cat > 0) ? sum_exp_calls_cat[alpha_idx][cat_idx] / count_fib_cat : 0.0;
 			double avg_fib_x = (count_fib_cat > 0) ? sum_fib_x_cat[alpha_idx][cat_idx] / count_fib_cat : 0.0;
@@ -362,15 +363,15 @@ void lab1()
 
 			detailed_file << double_to_csv(alphas[alpha_idx]) << ";"
 				<< double_to_csv(avg_interval) << ";"
-				<< (int)round(avg_exp_calls) << ";"  // Zaokr¹glone do int
+				<< (int)round(avg_exp_calls) << ";"  // Zaokr?glone do int
 				<< kategorie[cat_idx] << ";"
 				<< double_to_csv(avg_fib_x) << ";"
 				<< double_to_csv(avg_fib_f) << ";"
-				<< (int)round(avg_fib_calls) << ";"  // Zaokr¹glone do int
+				<< (int)round(avg_fib_calls) << ";"  // Zaokr?glone do int
 				<< count_fib_cat << ";"
 				<< double_to_csv(avg_lag_x) << ";"
 				<< double_to_csv(avg_lag_f) << ";"
-				<< (int)round(avg_lag_calls) << ";"  // Zaokr¹glone do int
+				<< (int)round(avg_lag_calls) << ";"  // Zaokr?glone do int
 				<< count_lag_cat << endl;
 		}
 	}
@@ -652,27 +653,27 @@ void lab2()
 	//PARAMETRY 
 	double epsilon = 1e-3;
 	int Nmax = 10000;
-	double alpha_reduction = 0.5;  // wspó³czynnik zmniejszania kroku (Hooke-Jeeves)
-	double alpha_expansion = 2.0;  // wspó³czynnik ekspansji (Rosenbrock)
-	double beta_contraction = 0.5; // wspó³czynnik kontrakcji (Rosenbrock)
+	double alpha_reduction = 0.5;  // wsp?czynnik zmniejszania kroku (Hooke-Jeeves)
+	double alpha_expansion = 2.0;  // wsp?czynnik ekspansji (Rosenbrock)
+	double beta_contraction = 0.5; // wsp?czynnik kontrakcji (Rosenbrock)
 
-	// Trzy ró¿ne d³ugoœci kroku startowego
+	// Trzy r?ne d?ugo?ci kroku startowego
 	double step_sizes[3] = { 0.5, 0.1, 0.01 };
 	int num_repeats = 100;
 
-	// Generator losowych punktów startowych
+	// Generator losowych punkt?w startowych
 	random_device rd;
 	mt19937 gen(rd());
 	uniform_real_distribution<> dis(-1.0, 1.0);
 
-	//CZÊŒÆ A: FUNKCJA TESTOWA
+	//CZ?? A: FUNKCJA TESTOWA
 	cout << "LAB 2: funkcja testowa" << endl;
 
 	// Plik wynikowy - Tabela 1
 	ofstream results_file("wyniki_lab2_tabela1.csv");
 	results_file << "Nr;Dlugosc_kroku;x1_0;x2_0;x1_HJ;x2_HJ;f_HJ;calls_HJ;Min_global_HJ;x1_Rosen;x2_Rosen;f_Rosen;calls_Rosen;Min_global_Rosen" << endl;
 
-	// Tablice do przechowywania sum (dla œrednich)
+	// Tablice do przechowywania sum (dla ?rednich)
 	int count_HJ_global[3] = { 0, 0, 0 };
 	int count_Rosen_global[3] = { 0, 0, 0 };
 
@@ -687,16 +688,16 @@ void lab2()
 	double sum_Rosen_calls[3] = { 0, 0, 0 };
 
 	// Zmienna do przechowania jednego przypadku dla wykresu
-	//vector<matrix> history_HJ_x;  // Historia punktów bazowych dla Hooke-Jeeves
+	//vector<matrix> history_HJ_x;  // Historia punkt?w bazowych dla Hooke-Jeeves
 	bool saved_for_plot = false;
 
-	// Pêtla po 100 powtórzeniach dla ka¿dego step_size
+	// P?tla po 100 powt?rzeniach dla ka?dego step_size
 	for (int step_idx = 0; step_idx < 3; step_idx++) {
 		double s = step_sizes[step_idx];
 		cout << "Przetwarzanie dla dlugosci kroku = " << s << endl;
 
 		for (int rep = 0; rep < num_repeats; rep++) {
-			// Losowy punkt startowy z przedzia³u [-1, 1] x [-1, 1]
+			// Losowy punkt startowy z przedzia?u [-1, 1] x [-1, 1]
 			matrix x0(2, 1);
 			x0(0) = dis(gen);
 			x0(1) = dis(gen);
@@ -704,10 +705,10 @@ void lab2()
 			//METODA HOOKE'A-JEEVESA
 			solution::clear_calls();
 
-			// Dla pierwszego przypadku z pierwsz¹ d³ugoœci¹ kroku - zapisz historiê
+			// Dla pierwszego przypadku z pierwsz? d?ugo?ci? kroku - zapisz histori?
 			if (step_idx == 0 && rep == 0) {
 				// Zmodyfikowana wersja HJ z zapisem historii
-				// (u¿yjemy standardowej funkcji, a potem zapiszemy jeden przypadek osobno)
+				// (u?yjemy standardowej funkcji, a potem zapiszemy jeden przypadek osobno)
 			}
 
 			solution opt_HJ = HJ(ff2T, x0, s, alpha_reduction, epsilon, Nmax);
@@ -721,7 +722,7 @@ void lab2()
 			solution opt_Rosen = Rosen(ff2T, x0, s0, alpha_expansion, beta_contraction, epsilon, Nmax);
 			int calls_Rosen = solution::f_calls;
 
-			// SprawdŸ czy znaleziono minimum globalne (f ~ 0)
+			// Sprawd? czy znaleziono minimum globalne (f ~ 0)
 			bool HJ_found_global = (m2d(opt_HJ.y) < 0.001);
 			bool Rosen_found_global = (m2d(opt_Rosen.y) < 0.001);
 
@@ -741,7 +742,7 @@ void lab2()
 				<< calls_Rosen << ";"
 				<< (Rosen_found_global ? "TAK" : "NIE") << endl;
 
-			// Akumulacja do œrednich (tylko dla minimum globalnego)
+			// Akumulacja do ?rednich (tylko dla minimum globalnego)
 			if (HJ_found_global) {
 				count_HJ_global[step_idx]++;
 				sum_HJ_x1[step_idx] += opt_HJ.x(0);
@@ -762,7 +763,7 @@ void lab2()
 
 	results_file.close();
 
-	//TABELA 2: ŒREDNIE (tylko dla minimum globalnego)
+	//TABELA 2: ?REDNIE (tylko dla minimum globalnego)
 	ofstream avg_file("wyniki_lab2_tabela2.csv");
 	avg_file << "Dlugosc_kroku;Metoda;Liczba_min_globalnych;Srednie_x1;Srednie_x2;Srednie_f;Srednie_calls" << endl;
 
@@ -800,7 +801,7 @@ void lab2()
 	avg_file.close();
 
 	//WYKRES: Jeden wybrany przypadek dla Hooke-Jeevesa
-	// Wykonaj jedn¹ optymalizacjê z zapisem historii punktów bazowych
+	// Wykonaj jedn? optymalizacj? z zapisem historii punkt?w bazowych
 
 //WYKRES: Jeden wybrany przypadek dla Hooke-Jeevesa
 //WYKRES: Trajektorie dla OBU metod
@@ -934,7 +935,7 @@ void lab2()
 
 	plot_file.close();
 
-	//CZÊŒÆ B: PROBLEM RZECZYWISTY (ROBOT)
+	//CZ?? B: PROBLEM RZECZYWISTY (ROBOT)
 	cout << endl << "LAB 2: problem rzeczywisty" << endl;
 
 	// Punkt startowy dla problemu robota: k1, k2 z  [0, 20]
@@ -946,7 +947,7 @@ void lab2()
 	x0_real(0) = dis_real(gen_real);  // k1
 	x0_real(1) = dis_real(gen_real);  // k2
 
-	double s_real = 1.0;  // d³ugoœæ kroku dla problemu rzeczywistego
+	double s_real = 1.0;  // d?ugo?? kroku dla problemu rzeczywistego
 
 	cout << "Punkt startowy: k1 = " << x0_real(0) << ", k2 = " << x0_real(1) << endl;
 
@@ -1006,7 +1007,7 @@ void lab2()
 	//SYMULACJE
 	cout << "start" << endl;
 
-	// Warunki pocz¹tkowe: alpha(0) = 0, omega(0) = 0
+	// Warunki pocz?tkowe: alpha(0) = 0, omega(0) = 0
 	matrix Y0(2, 1);
 	Y0(0) = 0.0;  // alpha
 	Y0(1) = 0.0;  // omega
@@ -1038,13 +1039,13 @@ void lab2()
 	}
 	sim_file.close();
 
-	//ANALIZA WYNIKÓW SYMULACJI 
+	//ANALIZA WYNIK?W SYMULACJI 
 	double alpha_final_HJ = Y_HJ[1](N_sim - 1, 0);
 	double omega_final_HJ = Y_HJ[1](N_sim - 1, 1);
 	double alpha_final_Rosen = Y_Rosen[1](N_sim - 1, 0);
 	double omega_final_Rosen = Y_Rosen[1](N_sim - 1, 1);
 
-	//const double M_PI = 3.141592653589793238;
+	const double M_PI = 3.141592653589793238;
 	cout << "Wyniki koncowe symulacji:" << endl;
 	cout << "Hooke-Jeeves:" << endl;
 	cout << "  alpha(100s) = " << alpha_final_HJ << " rad (cel: " << M_PI << " rad)" << endl;
@@ -1058,7 +1059,7 @@ void lab2()
 	cout << "  Blad polozenia: " << abs(alpha_final_Rosen - M_PI) << " rad" << endl;
 	cout << "  Blad predkosci: " << abs(omega_final_Rosen) << " rad/s" << endl << endl;
 
-	// Zwolnij pamiêæ
+	// Zwolnij pami??
 	Y_HJ[0].~matrix();
 	Y_HJ[1].~matrix();
 	Y_Rosen[0].~matrix();
@@ -1068,7 +1069,7 @@ void lab2()
 void lab3()
 {
 	cout << "==========================================" << endl;
-	cout << "   START LAB3 – uruchamianie obliczen..." << endl;
+	cout << "   START LAB3 ? uruchamianie obliczen..." << endl;
 	cout << "==========================================" << endl;
 
 	// --- ZAPIS TABELI 1 ---
@@ -1089,7 +1090,7 @@ void lab3()
 	{
 		double a = a_vals[k];
 
-		cout << "   • Parametr a = " << a << " -> uruchamianie 100 optymalizacji..." << endl;
+		cout << "   ? Parametr a = " << a << " -> uruchamianie 100 optymalizacji..." << endl;
 
 		matrix ud_a(1, 1); ud_a(0) = a;
 
@@ -1106,7 +1107,7 @@ void lab3()
 			x0(0) = x1_0;
 			x0(1) = x2_0;
 
-			// --- ZEWNÊTRZNA FUNKCJA KARY ---
+			// --- ZEWN?TRZNA FUNKCJA KARY ---
 			solution::clear_calls();
 			solution ext = pen(ff3T, x0, 1.0, 2.0, 1e-3, 20000, ud_a, matrix());
 
@@ -1128,7 +1129,7 @@ void lab3()
 			mean_ext_y[k] += (isnan(ye) ? 0.0 : ye);
 			mean_ext_calls[k] += fce;
 
-			// --- WEWNÊTRZNA FUNKCJA KARY ---
+			// --- WEWN?TRZNA FUNKCJA KARY ---
 			solution::clear_calls();
 			solution in = sym_NM(ff3T, x0, 0.2, 1.0, 0.5, 2.0, 0.5, 1e-3, 20000, ud_a, matrix());
 
@@ -1162,7 +1163,7 @@ void lab3()
 	cout << "[1/4] Zapisano tabela1.csv" << endl << endl;
 
 	// --- TABELA 2 ---
-	cout << "[2/4] Tworzenie tabeli 2 (œrednie wartoœci)..." << endl;
+	cout << "[2/4] Tworzenie tabeli 2 (?rednie warto?ci)..." << endl;
 
 	ofstream t2("tabela2.csv");
 	t2 << "a; x1_star_ext; x2_star_ext; r_star_ext; y_star_ext; f_calls_ext; "
@@ -1201,7 +1202,7 @@ void lab3()
 	double v0s = optR.x(0);
 	double ws = optR.x(1);
 
-	cout << "   • Optimum znalezione: v0x* = " << v0s
+	cout << "   ? Optimum znalezione: v0x* = " << v0s
 		<< ", w* = " << ws
 		<< ", y* = " << m2d(optR.y) << endl;
 
@@ -1220,7 +1221,7 @@ void lab3()
 	int Nsim = sz[0];
 	delete[] sz;
 
-	// --- x_end: pierwsze przeciêcie z ziemi¹ (y <= 0)
+	// --- x_end: pierwsze przeci?cie z ziemi? (y <= 0)
 	double x_end = NAN;
 	for (int i = 1; i < Nsim; i++) {
 		double y_prev = T[1](i - 1, 3);
@@ -1233,11 +1234,11 @@ void lab3()
 			break;
 		}
 	}
-	// jeœli nigdy nie uderzy w ziemiê – weŸ koniec (rzadka sytuacja)
+	// je?li nigdy nie uderzy w ziemi? ? we? koniec (rzadka sytuacja)
 	if (isnan(x_end)) x_end = T[1](Nsim - 1, 2);
 
 
-	// --- x(y=50): pierwsze przeciêcie y=50 przy spadku
+	// --- x(y=50): pierwsze przeci?cie y=50 przy spadku
 	double x_at_y50 = NAN;
 	for (int i = 1; i < Nsim; i++) {
 		double y_prev = T[1](i - 1, 3);
@@ -1270,7 +1271,7 @@ void lab3()
 
 	cout << "[4/4] Zapisano symulacja.csv" << endl << endl;
 	cout << "==========================================" << endl;
-	cout << "   ZAKONCZONO LAB3 – WSZYSTKIE TABELKI OK" << endl;
+	cout << "   ZAKONCZONO LAB3 ? WSZYSTKIE TABELKI OK" << endl;
 	cout << "==========================================" << endl;
 }
 
@@ -1284,16 +1285,16 @@ void read_lab4_data(string filename, matrix& M, int rows, int cols) {
         throw string("Nie mozna otworzyc pliku: " + filename);
     }
 
-    // Dane w plikach s¹ zapisane ci¹giem, ale logicznie tworz¹ macierz.
+    // Dane w plikach s? zapisane ci?giem, ale logicznie tworz? macierz.
     // XData ma 300 liczb (3 wiersze po 100 kolumn), YData ma 100 liczb (1 wiersz po 100 kolumn).
-    // W plikach s¹ one porozdzielane œrednikami i nowymi liniami.
+    // W plikach s? one porozdzielane ?rednikami i nowymi liniami.
 
     double val;
     char sep;
     for (int r = 0; r < rows; ++r) {
         for (int c = 0; c < cols; ++c) {
             file >> val;
-            file >> sep; // Pominiecie œrednika
+            file >> sep; // Pominiecie ?rednika
             M(r, c) = val;
         }
     }
@@ -1331,7 +1332,7 @@ struct ResultRow {
 };
 
 bool is_global(double y) {
-    return abs(y) < 0.05; // Zak³adamy ¿e globalne min jest bliskie 0
+    return abs(y) < 0.05; // Zak?adamy ?e globalne min jest bliskie 0
 }
 
 void lab4() {
@@ -1346,7 +1347,7 @@ void lab4() {
         cout << "Generowanie Tabela 1 i Tabela 2..." << endl;
 
         ofstream tab1("tabela1_wyniki.csv");
-        // Nag³ówek pasuj¹cy do Excela
+        // Nag??wek pasuj?cy do Excela
         tab1 << "Dlugosc kroku;Lp.;x1(0);x2(0);"
              << "x1*;x2*;y*;f_calls;g_calls;Minimum globalne [TAK/NIE];"  // SD
              << "x1*;x2*;y*;f_calls;g_calls;Minimum globalne [TAK/NIE];"  // CG
@@ -1360,19 +1361,19 @@ void lab4() {
              << "x1*;x2*;y*;f_calls;g_calls;H_calls;Liczba minimow globalnych"
              << endl;
 
-        double steps[] = {0.05, 0.25, -1.0}; // -1 oznacza zmiennokrokow¹
+        double steps[] = {0.05, 0.25, -1.0}; // -1 oznacza zmiennokrokow?
         string step_names[] = {"0.05", "0.25", "Zmienna"};
 
         std::random_device rd;
         std::mt19937 gen(rd());
         std::uniform_real_distribution<> dis(-2.0, 2.0);
 
-        // Dla ka¿dego kroku robimy 100 optymalizacji
+        // Dla ka?dego kroku robimy 100 optymalizacji
         for (int s = 0; s < 3; ++s) {
             double h = steps[s];
             string h_name = step_names[s];
 
-            // Zmienne do œrednich (Tabela 2)
+            // Zmienne do ?rednich (Tabela 2)
             double sum_sd[5] = {0}, sum_cg[5] = {0}, sum_n[6] = {0};
             int glob_sd = 0, glob_cg = 0, glob_n = 0;
 
@@ -1385,7 +1386,7 @@ void lab4() {
 
                 // --- SD ---
                 clear_counters();
-                solution::clear_calls(); // <--- WA¯NA POPRAWKA (Reset licznika biblioteki)
+                solution::clear_calls(); // <--- WA?NA POPRAWKA (Reset licznika biblioteki)
                 solution sol = SD(ff4T, gf4T, x0, h, epsilon, Nmax, ud1, ud2);
                 bool g = is_global(sol.y(0));
                 tab1 << d2s(sol.x(0)) << ";" << d2s(sol.x(1)) << ";" << d2s(sol.y(0)) << ";"
@@ -1399,7 +1400,7 @@ void lab4() {
 
                 // --- CG ---
                 clear_counters();
-                solution::clear_calls(); // <--- WA¯NA POPRAWKA
+                solution::clear_calls(); // <--- WA?NA POPRAWKA
                 sol = CG(ff4T, gf4T, x0, h, epsilon, Nmax, ud1, ud2);
                 g = is_global(sol.y(0));
                 tab1 << d2s(sol.x(0)) << ";" << d2s(sol.x(1)) << ";" << d2s(sol.y(0)) << ";"
@@ -1413,7 +1414,7 @@ void lab4() {
 
                 // --- Newton ---
                 clear_counters();
-                solution::clear_calls(); // <--- WA¯NA POPRAWKA
+                solution::clear_calls(); // <--- WA?NA POPRAWKA
                 sol = Newton(ff4T, gf4T, Hf4T, x0, h, epsilon, Nmax, ud1, ud2);
                 g = is_global(sol.y(0));
                 tab1 << d2s(sol.x(0)) << ";" << d2s(sol.x(1)) << ";" << d2s(sol.y(0)) << ";"
@@ -1428,7 +1429,7 @@ void lab4() {
                 tab1 << endl;
             }
 
-            // Zapisz œrednie do Tabela 2
+            // Zapisz ?rednie do Tabela 2
             auto avg = [](double sum, int n) { return n > 0 ? d2s(sum/n) : "0"; };
 
             tab2 << h_name << ";";
@@ -1462,8 +1463,8 @@ void lab4() {
             theta0(0)=0; theta0(1)=0; theta0(2)=0;
 
             clear_counters();
-            solution::clear_calls(); // <--- WA¯NA POPRAWKA
-            // U¿ywamy CG zgodnie z instrukcj¹
+            solution::clear_calls(); // <--- WA?NA POPRAWKA
+            // U?ywamy CG zgodnie z instrukcj?
             solution sol = CG(ff4R, gf4R, theta0, h, epsilon, Nmax, X, Y);
 
             // Oblicz P(theta) - accuracy
@@ -1473,7 +1474,7 @@ void lab4() {
                 double h_val = 1.0/(1.0+exp(-z));
                 if ( (h_val>=0.5 && Y(0,i)==1) || (h_val<0.5 && Y(0,i)==0) ) correct++;
             }
-            double acc = (double)correct; // 100 próbek, wiêc liczba poprawnych to te¿ procent
+            double acc = (double)correct; // 100 pr?bek, wi?c liczba poprawnych to te? procent
 
             tab3 << h << ";"
                  << d2s(sol.x(0)) << ";" << d2s(sol.x(1)) << ";" << d2s(sol.x(2)) << ";"
@@ -1483,15 +1484,15 @@ void lab4() {
 
 
         // ---------------------------------------------------------
-        // WYKRESY (Œcie¿ki optymalizacji)
+        // WYKRESY (?cie?ki optymalizacji)
         // ---------------------------------------------------------
         cout << "Generowanie danych do Wykresow..." << endl;
         ofstream wyk("wykresy_wyniki.csv");
-        // Punkt startowy (ustalony na sztywno, ¿eby wykres by³ powtarzalny)
+        // Punkt startowy (ustalony na sztywno, ?eby wykres by? powtarzalny)
         matrix x0_chart(2, 1);
         x0_chart(0) = -1.5; x0_chart(1) = 1.0;
 
-        // Tablica na przechowywanie œcie¿ek: [Metoda][Wariant][Krok]
+        // Tablica na przechowywanie ?cie?ek: [Metoda][Wariant][Krok]
         // Metody: 0=SD, 1=CG, 2=Newton
         // Warianty: 0=0.05, 1=0.25, 2=Var
         vector<string> paths[3][3];
@@ -1503,7 +1504,7 @@ void lab4() {
                 chart_recorder = &paths[m][v]; // Podpinamy rejestrator
 
                 clear_counters();
-                solution::clear_calls(); // <--- WA¯NA POPRAWKA
+                solution::clear_calls(); // <--- WA?NA POPRAWKA
                 if(m==0) SD(ff4T, gf4T, x0_chart, h, epsilon, Nmax, ud1, ud2);
                 if(m==1) CG(ff4T, gf4T, x0_chart, h, epsilon, Nmax, ud1, ud2);
                 if(m==2) Newton(ff4T, gf4T, Hf4T, x0_chart, h, epsilon, Nmax, ud1, ud2);
@@ -1524,7 +1525,7 @@ void lab4() {
             for(int m=0; m<3; ++m) {
                 for(int v=0; v<3; ++v) {
                     if(i < paths[m][v].size()) wyk << paths[m][v][i] << ";";
-                    else wyk << ";;"; // puste komórki
+                    else wyk << ";;"; // puste kom?rki
                 }
             }
             wyk << endl;
@@ -1548,9 +1549,9 @@ string d2s(double val) {
 
 void lab5() {
     try {
-        // Parametry ogólne
+        // Parametry og?lne
         double epsilon = 1e-5;
-        int Nmax = 10000;  // Limit wywo³añ (dla Powella mo¿e byæ potrzebny spory)
+        int Nmax = 10000;  // Limit wywo?a? (dla Powella mo?e by? potrzebny spory)
 
         // Generatory liczb losowych
         random_device rd;
@@ -1563,7 +1564,7 @@ void lab5() {
 
 
         // =============================================================
-        // CZÊŒÆ 1: FUNKCJA TESTOWA (Tabela 1)
+        // CZ?? 1: FUNKCJA TESTOWA (Tabela 1)
         // =============================================================
         cout << "Rozpoczynam obliczenia dla Funkcji Testowej..." << endl;
 
@@ -1572,13 +1573,13 @@ void lab5() {
 
         double A_values[] = { 1.0, 10.0, 100.0 };
         matrix ud1(2, 1); // [a, w]
-        matrix ud2;       // nieu¿ywane w testowej
+        matrix ud2;       // nieu?ywane w testowej
 
         for (double a : A_values) {
             cout << "  > Przetwarzanie dla a = " << a << "..." << endl;
 
-            // Dla ka¿dego 'a' losujemy jeden punkt startowy i u¿ywamy go dla wszystkich wag
-            // (¿eby wyniki by³y g³adkie na wykresie)
+            // Dla ka?dego 'a' losujemy jeden punkt startowy i u?ywamy go dla wszystkich wag
+            // (?eby wyniki by?y g?adkie na wykresie)
             matrix x0(2, 1);
             x0(0) = dis_test(gen);
             x0(1) = dis_test(gen);
@@ -1589,11 +1590,11 @@ void lab5() {
                 ud1(1) = w;
 
                 solution::clear_calls();
-                // Uruchamiamy Metodê Powella
+                // Uruchamiamy Metod? Powella
                 solution sol = Powell(ff5T, x0, epsilon, Nmax, ud1, ud2);
 
-                // Musimy rêcznie policzyæ wartoœci f1 i f2 dla znalezionego punktu
-                // ¿eby zapisaæ je do tabeli (do wykresu Pareto)
+                // Musimy r?cznie policzy? warto?ci f1 i f2 dla znalezionego punktu
+                // ?eby zapisa? je do tabeli (do wykresu Pareto)
                 double x1 = sol.x(0);
                 double x2 = sol.x(1);
                 double f1 = a * (pow(x1 - 3, 2) + pow(x2 - 3, 2));
@@ -1604,8 +1605,8 @@ void lab5() {
                    << d2s(f1) << ";" << d2s(f2) << ";"
                    << solution::f_calls << endl;
 
-                // Dobr¹ praktyk¹ w tworzeniu frontu Pareto jest branie wyniku poprzedniej iteracji
-                // jako startu do nastêpnej (przyspiesza obliczenia)
+                // Dobr? praktyk? w tworzeniu frontu Pareto jest branie wyniku poprzedniej iteracji
+                // jako startu do nast?pnej (przyspiesza obliczenia)
                 x0 = sol.x;
             }
         }
@@ -1614,19 +1615,19 @@ void lab5() {
 
 
         // =============================================================
-        // CZÊŒÆ 2: PROBLEM RZECZYWISTY - BELKA (Tabela 2)
+        // CZ?? 2: PROBLEM RZECZYWISTY - BELKA (Tabela 2)
         // =============================================================
         cout << "Rozpoczynam obliczenia dla Problemu Belki..." << endl;
 
         // KROK A: Normalizacja (Szukamy f1_min, f1_max, f2_min, f2_max)
-        // Uruchamiamy optymalizacjê dla w=1 (tylko masa) i w=0 (tylko ugiêcie)
-        // ¿eby poznaæ zakresy wartoœci.
+        // Uruchamiamy optymalizacj? dla w=1 (tylko masa) i w=0 (tylko ugi?cie)
+        // ?eby pozna? zakresy warto?ci.
 
     	cout << "  > Normalizacja (szukanie ekstremow)..." << endl;
     	matrix x0_beam(2, 1);
     	// USTAW TO NA SZTYWNO W BEZPIECZNYM MIEJSCU:
-    	x0_beam(0) = 0.5;  // D³ugoœæ l = 0.5m (bezpieczny œrodek)
-    	x0_beam(1) = 0.03; // Œrednica d = 3cm (bezpieczny œrodek)
+    	x0_beam(0) = 0.5;  // D?ugo?? l = 0.5m (bezpieczny ?rodek)
+    	x0_beam(1) = 0.03; // ?rednica d = 3cm (bezpieczny ?rodek)
 
     	matrix ud1_beam(2, 1);
     	matrix ud2_norm;
@@ -1636,13 +1637,13 @@ void lab5() {
         solution::clear_calls();
         solution sol_mass = Powell(ff5R, x0_beam, epsilon, Nmax, ud1_beam, ud2_norm);
 
-        // Obliczamy wartoœci fizyczne w tym punkcie
+        // Obliczamy warto?ci fizyczne w tym punkcie
         double l = sol_mass.x(0);
         double d = sol_mass.x(1);
         double f1_min = 7800.0 * (3.14159265 * d * d / 4.0) * l; // Masa
         double f2_at_min_mass = (64 * 1000.0 * pow(l, 3)) / (3 * 2.07e11 * 3.14159265 * pow(d, 4));
 
-        // 2. Minimalizacja ugiêcia (w=0) -> daje f2_min i f1_max
+        // 2. Minimalizacja ugi?cia (w=0) -> daje f2_min i f1_max
         ud1_beam(0) = 0.0;
         solution::clear_calls();
         solution sol_defl = Powell(ff5R, x0_beam, epsilon, Nmax, ud1_beam, ud2_norm);
@@ -1653,11 +1654,11 @@ void lab5() {
         double f2_min = (64 * 1000.0 * pow(l, 3)) / (3 * 2.07e11 * 3.14159265 * pow(d, 4));
 
         // Zapisujemy granice do normalizacji: [f1_min, f1_max, f2_min, f2_max]
-        // U¿ywamy wartoœci "skrzy¿owanych" jako maxów, bo to definiuje nasz zakres roboczy
+        // U?ywamy warto?ci "skrzy?owanych" jako max?w, bo to definiuje nasz zakres roboczy
         double f1_max = f1_at_min_defl;
         double f2_max = f2_at_min_mass;
 
-        // Wype³niamy macierz ud2 danymi do normalizacji
+        // Wype?niamy macierz ud2 danymi do normalizacji
         ud2_norm = matrix(4, 1);
         ud2_norm(0) = f1_min; ud2_norm(1) = f1_max;
         ud2_norm(2) = f2_min; ud2_norm(3) = f2_max;
@@ -1667,7 +1668,7 @@ void lab5() {
         cout << "    Ugiecie (f2): " << f2_min << " - " << f2_max << " [m]" << endl;
 
 
-    	// KROK B: W³aœciwa pêtla optymalizacji (Front Pareto)
+    	// KROK B: W?a?ciwa p?tla optymalizacji (Front Pareto)
     	ofstream t2("wyniki_lab5_tabela2.csv");
     	t2 << "w;l;d;Masa[kg];Ugiecie[m];Liczba wywolan" << endl;
 
@@ -1675,9 +1676,9 @@ void lab5() {
     		ud1_beam(0) = w;
 
     		// --- RESET PUNKTU STARTOWEGO (TO NAPRAWI SKOKI) ---
-    		// Zamiast braæ wynik z poprzedniej pêtli, zawsze startujemy ze œrodka.
-    		x0_beam(0) = 0.5;  // bezpieczna d³ugoœæ
-    		x0_beam(1) = 0.03; // bezpieczna œrednica
+    		// Zamiast bra? wynik z poprzedniej p?tli, zawsze startujemy ze ?rodka.
+    		x0_beam(0) = 0.5;  // bezpieczna d?ugo??
+    		x0_beam(1) = 0.03; // bezpieczna ?rednica
     		// --------------------------------------------------
 
     		solution::clear_calls();
@@ -1693,7 +1694,7 @@ void lab5() {
 			   << d2s(mass) << ";" << d2s(defl) << ";"
 			   << solution::f_calls << endl;
 
-    		// USUNELIŒMY LINIÊ: x0_beam = sol.x;
+    		// USUNELI?MY LINI?: x0_beam = sol.x;
     	}
 
         t2.close();
@@ -1710,5 +1711,136 @@ void lab5() {
 
 void lab6()
 {
+    try {
+        cout << "========== LAB 6 - ALGORYTM EWOLUCYJNY ==========" << endl;
 
+        int mi = 20, lambda = 40;
+        double epsilon = 1e-10;
+        int Nmax = 10000;
+
+        matrix lb_test(2, 1, -5.0), ub_test(2, 1, 5.0);
+        double sigmas[] = {0.01, 0.1, 1.0, 10.0, 100.0};
+        int num_repeats = 100;
+
+        // ========== TABELA 1 ==========
+        ofstream tab1("wyniki_lab6_tabela1.csv");
+        tab1 << "Sigma;Lp;x1;x2;y;Liczba wywolan;Minimum globalne" << endl;
+
+        // Dane do tabeli 2
+        vector<double> sum_x1[5], sum_x2[5], sum_y[5], sum_calls[5];
+        int count_global[5] = {0,0,0,0,0};
+
+        for (int s = 0; s < 5; ++s) {
+            double sigma_val = sigmas[s];
+            matrix sigma0(2, 1, sigma_val);
+            cout << "Sigma = " << sigma_val << endl;
+
+            for (int rep = 0; rep < num_repeats; ++rep) {
+                solution::clear_calls();
+                solution opt = EA(ff6T, 2, lb_test, ub_test, mi, lambda, sigma0, epsilon, Nmax);
+
+                double x1 = opt.x(0), x2 = opt.x(1), f_val = m2d(opt.y);
+                int calls = solution::f_calls;
+            	bool is_global = (f_val < 1e-6);
+
+                tab1 << double_to_csv(sigma_val) << ";" << (rep+1) << ";"
+                     << double_to_csv(x1) << ";" << double_to_csv(x2) << ";"
+                     << double_to_csv(f_val) << ";" << calls << ";"
+                     << (is_global ? "tak" : "nie") << endl;
+
+                if (is_global) {
+                    count_global[s]++;
+                    sum_x1[s].push_back(x1);
+                    sum_x2[s].push_back(x2);
+                    sum_y[s].push_back(f_val);
+                    sum_calls[s].push_back(calls);
+                }
+            }
+        }
+        tab1.close();
+        cout << "Zapisano wyniki_lab6_tabela1.csv" << endl;
+
+        // ========== TABELA 2 ==========
+        ofstream tab2("wyniki_lab6_tabela2.csv");
+        tab2 << "Sigma;x1;x2;y;Liczba wywolan;Liczba minimow globalnych" << endl;
+
+        for (int s = 0; s < 5; ++s) {
+            double avg_x1=0, avg_x2=0, avg_y=0, avg_calls=0;
+            int n = count_global[s];
+            if (n > 0) {
+                for (int i = 0; i < n; ++i) {
+                    avg_x1 += sum_x1[s][i];
+                    avg_x2 += sum_x2[s][i];
+                    avg_y += sum_y[s][i];
+                    avg_calls += sum_calls[s][i];
+                }
+                avg_x1 /= n; avg_x2 /= n; avg_y /= n; avg_calls /= n;
+            }
+            tab2 << double_to_csv(sigmas[s]) << ";"
+                 << double_to_csv(avg_x1) << ";" << double_to_csv(avg_x2) << ";"
+                 << double_to_csv(avg_y) << ";" << double_to_csv(avg_calls) << ";"
+                 << n << endl;
+        }
+        tab2.close();
+        cout << "Zapisano wyniki_lab6_tabela2.csv" << endl;
+
+        // ========== PROBLEM RZECZYWISTY ==========
+        cout << "\n--- PROBLEM RZECZYWISTY ---" << endl;
+
+        ifstream file("polozenia.txt");
+        if (!file.is_open()) throw string("Nie mozna otworzyc polozenia.txt");
+
+        matrix dane_exp(1001, 2);
+        string line;
+        int row = 0;
+        while (getline(file, line) && row < 1001) {
+            for (char& c : line) if (c == ',') c = '.';
+            stringstream ss(line);
+            string val1, val2;
+            if (getline(ss, val1, ';') && getline(ss, val2, ';')) {
+                dane_exp(row, 0) = stod(val1);
+                dane_exp(row, 1) = stod(val2);
+            }
+            row++;
+        }
+        file.close();
+        cout << "Wczytano " << row << " wierszy" << endl;
+
+        matrix lb_real(2,1), ub_real(2,1);
+        lb_real(0) = 0.1; lb_real(1) = 0.1;
+        ub_real(0) = 3.0; ub_real(1) = 3.0;
+        matrix sigma0_real(2, 1, 0.5);
+
+        solution::clear_calls();
+        solution opt_real = EA(ff6R, 2, lb_real, ub_real, mi, lambda, sigma0_real, 1e-6, 5000, dane_exp);
+
+        double b1 = opt_real.x(0), b2 = opt_real.x(1);
+        cout << "b1 = " << b1 << ", b2 = " << b2 << endl;
+
+        // ========== TABELA 3 ==========
+        ofstream tab3("wyniki_lab6_tabela3.csv");
+        tab3 << "b1;b2;y;Liczba wywolan" << endl;
+        tab3 << double_to_csv(b1) << ";" << double_to_csv(b2) << ";"
+             << double_to_csv(m2d(opt_real.y)) << ";" << solution::f_calls << endl;
+        tab3.close();
+        cout << "Zapisano wyniki_lab6_tabela3.csv" << endl;
+
+        // ========== SYMULACJA ==========
+        matrix Y0(4,1); Y0(0)=0; Y0(1)=0; Y0(2)=0; Y0(3)=0;
+        matrix params(2,1); params(0)=b1; params(1)=b2;
+        matrix* Y_sim = solve_ode(df6, 0, 0.1, 100, Y0, params);
+
+        ofstream sim("wyniki_lab6_symulacja.csv");
+        sim << "t;x1_exp;x2_exp;x1_sim;x2_sim" << endl;
+        int N_sim = get_len(Y_sim[0]);
+        for (int i = 0; i < N_sim; ++i) {
+            sim << double_to_csv(Y_sim[0](i)) << ";"
+                << double_to_csv(dane_exp(i,0)) << ";" << double_to_csv(dane_exp(i,1)) << ";"
+                << double_to_csv(Y_sim[1](i,0)) << ";" << double_to_csv(Y_sim[1](i,2)) << endl;
+        }
+        sim.close();
+        delete[] Y_sim;
+        cout << "Zapisano wyniki_lab6_symulacja.csv" << endl;
+
+    } catch (string ex) { cout << "BLAD: " << ex << endl; }
 }

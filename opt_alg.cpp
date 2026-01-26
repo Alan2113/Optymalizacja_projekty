@@ -971,14 +971,133 @@ solution EA(matrix(*ff)(matrix, matrix, matrix), int N, matrix lb, matrix ub, in
 {
 	try
 	{
-		solution Xopt;
-		// Tu wpisz kod funkcji (na razie puste)
-		return Xopt;
+		std::random_device rd;
+		std::mt19937 gen(rd());
+		std::uniform_real_distribution<> uniform01(0.0, 1.0);
+		std::normal_distribution<> normal01(0.0, 1.0);
+
+		double alpha_mut = 1.0 / sqrt(2.0 * N);
+		double beta_mut = 1.0 / sqrt(2.0 * sqrt((double)N));
+
+		std::vector<matrix> P_x(mi), P_sigma(mi);
+		std::vector<double> P_y(mi);
+
+		for (int j = 0; j < mi; ++j) {
+			P_x[j] = matrix(N, 1);
+			P_sigma[j] = matrix(N, 1);
+			for (int i = 0; i < N; ++i) {
+				P_x[j](i) = lb(i) + uniform01(gen) * (ub(i) - lb(i));
+				P_sigma[j](i) = sigma0(i);
+			}
+			solution temp(P_x[j]);
+			temp.fit_fun(ff, ud1, ud2);
+			P_y[j] = m2d(temp.y);
+		}
+
+		while (true) {
+			int best_idx = 0;
+			for (int j = 1; j < mi; ++j)
+				if (P_y[j] < P_y[best_idx]) best_idx = j;
+
+			if (P_y[best_idx] < epsilon) {
+				solution Xopt(P_x[best_idx]);
+				Xopt.y = P_y[best_idx];
+				Xopt.flag = 1;
+				return Xopt;
+			}
+
+			if (solution::f_calls >= Nmax) {
+				solution Xopt(P_x[best_idx]);
+				Xopt.y = P_y[best_idx];
+				Xopt.flag = 0;
+				return Xopt;
+			}
+
+			std::vector<double> phi(mi);
+			double Phi_sum = 0.0;
+			for (int j = 0; j < mi; ++j) {
+				phi[j] = 1.0 / P_y[j];
+				Phi_sum += phi[j];
+			}
+
+			std::vector<double> q(mi + 1);
+			q[0] = 0.0;
+			for (int j = 1; j <= mi; ++j)
+				q[j] = q[j - 1] + phi[j - 1] / Phi_sum;
+
+			double a_common = normal01(gen);
+
+			std::vector<matrix> T_x(lambda), T_sigma(lambda);
+			std::vector<double> T_y(lambda);
+
+			for (int j = 0; j < lambda; ++j) {
+				double r1 = uniform01(gen);
+				int k1 = 0;
+				for (int k = 1; k <= mi; ++k)
+					if (r1 > q[k - 1] && r1 <= q[k]) { k1 = k - 1; break; }
+
+				double r2 = uniform01(gen);
+				int k2 = 0;
+				for (int k = 1; k <= mi; ++k)
+					if (r2 > q[k - 1] && r2 <= q[k]) { k2 = k - 1; break; }
+
+				double r_cross = uniform01(gen);
+				T_x[j] = matrix(N, 1);
+				T_sigma[j] = matrix(N, 1);
+				for (int i = 0; i < N; ++i) {
+					T_x[j](i) = r_cross * P_x[k1](i) + (1.0 - r_cross) * P_x[k2](i);
+					T_sigma[j](i) = r_cross * P_sigma[k1](i) + (1.0 - r_cross) * P_sigma[k2](i);
+				}
+
+				double b_sigma = normal01(gen);
+				for (int i = 0; i < N; ++i)
+					T_sigma[j](i) = T_sigma[j](i) * exp(alpha_mut * a_common + beta_mut * b_sigma);
+
+				for (int i = 0; i < N; ++i) {
+					double b_x = normal01(gen);
+					T_x[j](i) = T_x[j](i) + b_x * T_sigma[j](i);
+					if (T_x[j](i) < lb(i)) T_x[j](i) = lb(i);
+					if (T_x[j](i) > ub(i)) T_x[j](i) = ub(i);
+				}
+
+				solution temp(T_x[j]);
+				temp.fit_fun(ff, ud1, ud2);
+				T_y[j] = m2d(temp.y);
+			}
+
+			std::vector<matrix> combined_x(mi + lambda), combined_sigma(mi + lambda);
+			std::vector<double> combined_y(mi + lambda);
+
+			for (int j = 0; j < mi; ++j) {
+				combined_x[j] = P_x[j];
+				combined_sigma[j] = P_sigma[j];
+				combined_y[j] = P_y[j];
+			}
+			for (int j = 0; j < lambda; ++j) {
+				combined_x[mi + j] = T_x[j];
+				combined_sigma[mi + j] = T_sigma[j];
+				combined_y[mi + j] = T_y[j];
+			}
+
+			for (int i = 0; i < mi; ++i) {
+				int min_idx = i;
+				for (int j = i + 1; j < mi + lambda; ++j)
+					if (combined_y[j] < combined_y[min_idx]) min_idx = j;
+				std::swap(combined_x[i], combined_x[min_idx]);
+				std::swap(combined_sigma[i], combined_sigma[min_idx]);
+				std::swap(combined_y[i], combined_y[min_idx]);
+			}
+
+			for (int j = 0; j < mi; ++j) {
+				P_x[j] = combined_x[j];
+				P_sigma[j] = combined_sigma[j];
+				P_y[j] = combined_y[j];
+			}
+		}
 	}
 	catch (string ex_info)
 	{
 		throw ("solution EA(...):\n" + ex_info);
 	}
 }
-
 

@@ -3,7 +3,8 @@
 #include <cmath>
 #include <limits>
 
-
+#define _USE_MATH_DEFINES
+#include <cmath>
 // --- GLOBALNE LICZNIKI (do statystyk) ---
 int f_calls_cnt = 0;
 int g_calls_cnt = 0;
@@ -66,7 +67,7 @@ matrix df0(double t, matrix Y, matrix ud1, matrix ud2)
 matrix ff1T(matrix x, matrix ud1, matrix ud2)
 {
 
-	//double M_PI = 3.141592653589793238;
+	const double M_PI = 3.141592653589793238;
 	matrix y;
 	double x_val = m2d(x);
 	double x_scaled = 0.1 * x_val;
@@ -171,7 +172,7 @@ matrix ff1R(matrix x, matrix ud1, matrix ud2)
 // f(x1, x2) = x1^2 + x2^2 - cos(2.5π*x1) - cos(2.5π*x2) + 2
 matrix ff2T(matrix x, matrix ud1, matrix ud2)
 {
-	//const double M_PI = 3.141592653589793238;
+	const double M_PI = 3.141592653589793238;
 	matrix y;
 	double x1 = x(0);
 	double x2 = x(1);
@@ -197,7 +198,7 @@ matrix ff2R(matrix x, matrix ud1, matrix ud2)
 	double I = (1.0 / 3.0) * mr * pow(l, 2) + mc * pow(l, 2);
 
 	// Referencje
-	//float M_PI = 3.141592653589793238;
+	const double M_PI = 3.141592653589793238;
 	const double alpha_ref = M_PI;  // π rad
 	const double omega_ref = 0.0;   // 0 rad/s
 
@@ -254,7 +255,7 @@ matrix df2(double t, matrix Y, matrix ud1, matrix ud2)
 	double I = (1.0 / 3.0) * mr * pow(l, 2) + mc * pow(l, 2);
 
 	// Referencje
-	//const double M_PI = 3.141592653589793238;
+	const double M_PI = 3.141592653589793238;
 	const double alpha_ref = M_PI;
 	const double omega_ref = 0.0;
 
@@ -765,3 +766,78 @@ matrix gf5R(matrix x, matrix ud1, matrix ud2) {
     return matrix(2, 1); // Nieużywane
 }
 
+
+// ==========================================================
+//              LAB 6 - ALGORYTM EWOLUCYJNY
+// ==========================================================
+
+// --- FUNKCJA TESTOWA Lab 6 ---
+// f(x1, x2) = x1^2 + x2^2 - cos(2.5*pi*x1) - cos(2.5*pi*x2) + 2
+matrix ff6T(matrix x, matrix ud1, matrix ud2)
+{
+	matrix y;
+	double x1 = x(0);
+	double x2 = x(1);
+
+	y = pow(x1, 2) + pow(x2, 2) - cos(2.5 * PI * x1) - cos(2.5 * PI * x2) + 2.0;
+	return y;
+}
+
+// --- PROBLEM RZECZYWISTY Lab 6 - DWA CIEZARKI NA SPREZYNACH ---
+matrix ff6R(matrix x, matrix ud1, matrix ud2)
+{
+	double b1 = x(0);
+	double b2 = x(1);
+
+	double t0 = 0.0;
+	double dt = 0.1;
+	double tend = 100.0;
+
+	matrix Y0(4, 1);
+	Y0(0) = 0.0;  Y0(1) = 0.0;  Y0(2) = 0.0;  Y0(3) = 0.0;
+
+	matrix params(2, 1);
+	params(0) = b1;
+	params(1) = b2;
+
+	matrix* Y = solve_ode(df6, t0, dt, tend, Y0, params, ud2);
+
+	int N = get_len(Y[0]);
+	double error = 0.0;
+
+	for (int i = 0; i < N; ++i) {
+		double x1_sim = Y[1](i, 0);
+		double x2_sim = Y[1](i, 2);
+		double x1_exp = ud1(i, 0);
+		double x2_exp = ud1(i, 1);
+
+		error += pow(x1_sim - x1_exp, 2) + pow(x2_sim - x2_exp, 2);
+	}
+
+	delete[] Y;
+
+	matrix yy;
+	yy = error;
+	return yy;
+}
+
+// --- ROWNANIA ROZNICZKOWE Lab 6 ---
+matrix df6(double t, matrix Y, matrix ud1, matrix ud2)
+{
+	const double m1 = 1.0, m2 = 2.0;
+	const double k1 = 4.0, k2 = 6.0;
+	const double F = 5.0;
+
+	double b1 = ud1(0);
+	double b2 = ud1(1);
+
+	double x1 = Y(0), v1 = Y(1), x2 = Y(2), v2 = Y(3);
+
+	matrix dY(4, 1);
+	dY(0) = v1;
+	dY(1) = (1.0 / m1) * (-b1 * v1 - b2 * (v1 - v2) - k1 * x1 - k2 * (x1 - x2));
+	dY(2) = v2;
+	dY(3) = (1.0 / m2) * (b2 * (v1 - v2) + k2 * (x1 - x2) + F);
+
+	return dY;
+}
